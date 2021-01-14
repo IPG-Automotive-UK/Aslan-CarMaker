@@ -1,0 +1,82 @@
+#INFOFILE1.1 - Do not remove this line!
+FileIdent = CarMaker-CMRosIFParameters	1
+FileCreator = CMRosIF v0.6.8 2019-05-23 15:00:24
+
+
+
+## Configuration of CarMaker ROS Interface ###############################
+#
+# Keys:
+# - Cfg.Lib.Path  = Relative path to shared library with user specific CMNode
+# - Cfg.Mode      = Mode for the basic CarMaker ROS Interface
+#                   - 0 = Don't initialize CarMaker ROS Node
+# - Cfg.Name      = Name of CarMaker ROS Node (before ROS remapping)
+# - Cfg.Args      = Arguments normally provided to ROS executable via terminal
+#                   - e.g. for ROS remapping arguments (e.g. __ns:=MyVhcl)
+# - Cfg.Features  = List of additional features
+#                   - "AutoStart"   = Automated mechanism every simulation start
+#                                     - Stopping ros launch and CM executable
+#                                     - Start of ros launch file and CM executable
+#                                     - calls "Cfg.LaunchProc" in context "startsim"
+#                   - "TerminalCmd" = Mechanism to handle multiple Terminals
+#                                     - Running multiple launch files
+#                                     - Auto termination of launch terminal
+#                                     - Additional terminals with Linux commands
+#                                     - Managing different tabs and terminals
+#                                     - Check "Cfg.UserUtils.FPath" and "Cfg.LaunchProc"
+#                                     - additional parameterization via keys
+#                                       - <pre> = "Cfg.TerminalCmd"
+#                                       - "<pre>.startwait" = Time to wait in ms after
+#                                                             start command was executed
+#                                       - "<pre>.stopwait" = Time to wait in ms after
+#                                                            terminal stop request
+#                   - "SimNet"      = Support for CarMaker SimNet extension
+#                                     - Needs to be set before CM Main GUI is started
+#                                     - Only effective in combination with feature
+#                                       "TerminalCmd" and "AutoStart"
+# - Cfg.ScriptFile = Automatically sourced before calling "Cfg.LaunchProc"
+#                    - file path is relative "<CMProjDir>/Data/Script"
+#                    - Currently only used if feature "TerminalCmd" is active
+#                    - Currently no '"' are allowed in Launch.Args
+#
+#
+
+Cfg.Lib.Path = ros/ros1_ws/devel/lib/libCMNode_ROS1.so
+Cfg.Mode = 1
+Cfg.Name = CMNode
+Cfg.Args =
+Cfg.Features = TerminalCmd
+Cfg.ScriptFile = CMRosIF_UserUtils.tcl
+Cfg.LaunchProc = ::MyCMRosIFUtils::LaunchProc
+#Cfg.TerminalCmd.startwait = 2000
+#Cfg.TerminalCmd.stopwait = 2000
+
+## Configuration of External ROS Node or launch file  #####################
+#
+# Keys:
+# - Launch.Args = CM Main GUI calls "roslaunch <Launch.Args>" in new terminal
+# - rqt.Args    = CM Main GUI calls "rqt <rqt.Args>" in new terminal
+#
+
+Launch.Args =
+
+rqt.Args =
+
+
+
+## Additional Parameters (e.g. used inside CMNode) ################
+#
+# Keys:
+# - Node.Mode       = CarMaker Node specific Mode. 0=Disabled, 1=Enabled
+# - Node.Sync.Mode  = Synchronization mode (dependent on implementation!)
+# - Node.UseSimTime = CarMaker Node acts as Clock Server. 0=Disabled, 1=Enabled
+#                     - CarMaker sets global parameter use_sim_time (available for all Nodes)
+#                     - Restart ROS Daemon, Start CarMaker Executable, then External Node(s)
+#                     - ROS Parameter "use_sim_time" might be also set in launch file
+#
+
+Node.Mode = 1
+Node.Sync.Mode = 0
+Node.Sync.TimeMax = 5.0
+Node.UseSimTime = 1
+Node.nCyclesClock = 100

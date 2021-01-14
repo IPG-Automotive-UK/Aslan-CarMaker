@@ -1,0 +1,10 @@
+#CMDICT2 linux
+
+# List of user defined CarMaker dictionary variables to be created when
+# CarMaker for Simulink starts up, before the first start of a simulation.
+
+#Name				Unit			Type	nStates	Flags
+
+# Defined in TractCtrl.mdl
+#EngineTrqRed			Nm			float	0	-
+

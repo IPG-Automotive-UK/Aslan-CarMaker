@@ -1,0 +1,13 @@
+../app_tmp.c: makefile $(OBJS_$(ARCH)) $(OBJS) $(LD_LIBS_MK)
+	$(QECHO) " MK     $@"
+	$Q $(CREATE_INFO_CMD)
+
+%.cm4sl.o:	%.o
+
+flags := $(filter -D%,$(CFLAGS))
+macros := $(foreach flag,$(flags),$(subst =," ", $(subst -D,,$(flag))))
+macros:
+	-@ echo > ../.settings/macros
+	-@ for macro in $(macros); do echo >> ../.settings/macros \#define $$macro; done	
+	
+

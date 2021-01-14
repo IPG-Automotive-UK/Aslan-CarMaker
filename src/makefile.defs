@@ -1,0 +1,54 @@
+# first include path has to be the include path of MakeDefs!!!
+
+include $(CM_DIR)/include/MakeDefs.linux64
+
+APP_VER = Car_Generic <insert.your.version.no>
+APP_NAME = CarMaker.$(ARCH)$(EXE_EXT)
+
+ifeq ($(DEBUG),true)
+	OPT_CFLAGS = -g -O1
+endif
+
+
+LD_LIBS = $(CAR_LIB) $(CARMAKER_LIB) $(DRIVER_LIB) $(ROAD_LIB) $(TIRE_LIB)
+OBJS_xeno = $(OBJS_CANIOGEN) $(OBJS_CANIOGEN_USER)
+OBJS_linux =
+OBJS_win32 =
+
+OBJ_APP = ../app_tmp.o
+
+# Prepend local include/library directory to include path:
+# PREINC_CFLAGS +=		-I../../include -I../lib/$(ARCH) -I../../lib
+
+# Append local include/library directory to include path:
+# INC_CFLAGS +=		-I../../include -I../../lib/$(ARCH) -I../../lib
+
+
+### Linking with RTW-built Simulink models
+
+# @@PLUGIN-BEGIN-ECLIBS@@ - Automatically generated code - don't edit!
+# @@PLUGIN-END@@
+
+### END (Linking with RTW-built Simulink models)
+
+
+### SOME/IP
+#DEF_CFLAGS +=		-DEXAMPLE_SOMEIP
+
+### EtherCAT
+#DEF_CFLAGS +=		-DEXAMPLE_ECAT
+
+
+### I/O generator for CANdb files
+#
+# <---
+#OBJS_CANIOGEN :=	../IO_CAN.o
+#OBJS_CANIOGEN_USER :=	$(OBJS_CANIOGEN:.o=_User.o)
+#DEF_CFLAGS +=		-DEXAMPLE_IO_CAN
+# <---
+# I/O Module IO_CAN.o
+#IO_CAN_DB =	../../CANdb/CANiogenGeneric.dbc
+#IO_CAN_FLAGS =	-srvECU ESP
+# <---
+#
+### END (I/O generator for CANdb files)

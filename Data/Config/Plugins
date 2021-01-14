@@ -1,0 +1,5 @@
+#INFOFILE1.1 - Do not remove this line!
+FileIdent = CarMaker-Plugins 1
+FileCreator = CarMaker 2020-12-15 14:05:26
+HydBrakeSystem.HydESP = 1
+HydBrakeSystem.HydESP.Info = HydESP

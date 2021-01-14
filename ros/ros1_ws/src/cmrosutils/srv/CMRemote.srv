@@ -1,0 +1,6 @@
+string type   # general type of command
+string msg    # message to be evaluated
+string data   # additional data, e.g. command arguments, ...
+---
+int32  res    # result of triggered service
+string msg    # informational, e.g. for error messages

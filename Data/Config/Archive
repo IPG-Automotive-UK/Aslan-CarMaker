@@ -1,0 +1,105 @@
+#INFOFILE1 - Do not remove this line!
+
+# General Information
+#
+# To make use of the CarMaker archiving functionality, the following
+# requirements must be met:
+# 1. Archiving has to be switched on in the CarMaker GUI ('Settings' menu).
+# 2. An archival configuration file Data/Config/Archive must exist.
+#    The same filename conventions as for other files in the Data/Config
+#    directory apply (e.g. SimParameters vs. SimParameters.<hostname>).
+#
+# The current testrun will be archived at the end of the simulation,
+# but only if at least one simulation result file was created.
+# The configured result file name also determines the archive name.
+
+
+# Format - File format of the resulting testrun archive.
+#
+# Available formats are dir, tgz and zip.
+# The dir format collects all files in a directory, both tgz and zip
+# pack everything into an archive file of the respective format instead.
+# Suggested format is zip under MS Windows, tgz on all other systems.
+
+# Format = tgz
+
+
+# FlatArchive - Put all files into a flat archive.
+#
+# If set to yes, the resulting testrun archive will consist of a
+# single directory containing all archived files.
+# If set to no, the resulting testrun archive will preserve the
+# directory structure of the files to be archived.
+# Default is no, i.e. the directory structure is preserved.
+
+FlatArchive = no
+
+
+# CheckAccess - Check access time of files to be archived.
+#
+# If set to yes, only files that seem to be accessed by the simulation
+# program during the current testrun are put into the archive. This
+# makes it possible to specify a superset of all possibly relevant files
+# to be archived, yet only the files actually used in the current testrun
+# will be archived, thus saving disk space.
+# If set to no, file are put into the archive independently of their
+# current file access time.
+# Default is no, file access time is NOT checked.
+
+CheckAccess = no
+
+
+# Files - List of files to be archived after a testrun.
+#
+# The list of files must contain one line per file to be archived,
+# each line indented by a tab character. The following rules apply:
+#
+# - Paths may be absolute or relative to the project directory.
+#
+# - If an entry starts with an exclamation mark '!', the file access
+#   time for the specified file will not be checked.
+#
+# - Filenames with wildcards are allowed, e.g. an entry like !src/*
+#   archives all files in the src directory with the testrun.
+#
+# - References to non-existent files will be silently ignored.
+#
+# - The following shortcuts are recognized and automatically replaced
+#   with the appropriate path (case is ignored for shortcuts):
+#	SimParameters (*)
+#       EcuParameters
+#       OutputQuantities
+#       InputFromFile
+#       Archive
+#       TestrunComplete (= Testrun + the following shortcuts)
+#           Testrun (*)
+#           Road
+#           Tires
+#           Trailer
+#           UserDriver
+#           VehicleControl
+#       VehicleComplete (= vehicle + the following shortcuts)
+#           Vehicle (*)
+#           Brake
+#           Steering
+#           Suspensions
+#           Suspextforces
+#           Powertrain
+#           PT.Engine
+#           PT.Clutch
+#           PT.Gearbox
+#           PT.Driveline
+#	TrailerComplete (= trailer + the following shortcuts)
+#           Trailer (*)
+#           TrBrake
+#           TrSuspensions
+#           TrSuspextforces
+#           TrTires
+#
+# The default contains all shortcuts marked with (*) in the above list.
+
+Files:
+	SimParameters
+	Testrun
+	Vehicle
+	Trailer

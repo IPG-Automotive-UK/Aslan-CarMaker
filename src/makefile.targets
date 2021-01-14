@@ -1,0 +1,19 @@
+install: ../$(APP_NAME)
+	cd $(subst \,/,$(CWD))/..; $(INSTALL_APP) $(APP_NAME) $(ARCH)
+	
+../app_tmp.c: makefile $(OBJS_$(ARCH)) $(OBJS) $(LD_LIBS_MK)
+	$(QECHO) " MK     $@"
+	$Q $(CREATE_INFO_CMD)
+	
+flags := $(filter -D%,$(CFLAGS))
+macros := $(foreach flag,$(flags),$(subst =," ", $(subst -D,,$(flag))))
+macros:
+	-@ echo > ../.settings/macros
+	-@ for macro in $(macros); do echo >> ../.settings/macros \#define $$macro; done	
+	
+%.depend_caniogen:	makefile
+	$(QECHO) " MK     $@"
+	$Q $(CANIOGEN) -eclipse -mkrules "$*.o" > $@
+ifneq ($(OBJS_CANIOGEN),)
+include $(OBJS_CANIOGEN:.o=.depend_caniogen)
+endif

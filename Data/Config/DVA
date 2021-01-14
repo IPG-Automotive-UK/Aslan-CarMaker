@@ -1,0 +1,20 @@
+#INFOFILE1.1 - Do not remove this line!
+FileIdent = CarMaker-DVA 4.0
+nDialogQu = 10
+Qu.0.Name = Car.Fr1.tx
+Qu.0.Mode = - value
+Qu.0.Count = 1
+Qu.0.Unit = m
+Qu.1.Name = Car.Fr1.ty
+Qu.1.Mode = - value
+Qu.1.Count = 1
+Qu.1.Unit = m
+Qu.2.Name = Car.CRL.tx
+Qu.2.Mode = - value
+Qu.2.Count = 1
+Qu.2.Unit = m
+Qu.3.Name = Car.CRL.rx
+Qu.3.Mode = - value
+Qu.3.Count = 1
+Qu.3.Unit = rad
+nQu = 4

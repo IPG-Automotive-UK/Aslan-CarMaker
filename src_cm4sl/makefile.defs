@@ -1,0 +1,55 @@
+# first include path has to be the include path of MakeDefs!!!
+
+include $(CM_DIR)/include/MakeDefs.linux64
+
+# @@PLUGIN-BEGIN-MATLAB@@ - Automatically generated code - don't edit!
+# @@PLUGIN-END@@
+
+# Matlab version and Matlab installation directory.
+# Uncomment only when overriding or not using CarMaker's model plugin mechanism.
+# MATSUPP_MATVER =	R2016a
+# MAT_HOME =		/opt/MATLAB/R2016a
+ifndef MAT_HOME
+$(error Matlab version and directory in MATSUPP_MATVER/MAT_HOME required)
+endif
+
+include $(CARMAKER_DIR_MK)/CM4SL/MakeDefs4SL
+
+APP_VER =		Car_Generic ?.?
+APP_NAME =		libCarmaker4sl.$(MAT_EXT)
+
+
+ifeq ($(DEBUG),true)
+	OPT_CFLAGS = -g -O1
+endif
+
+
+# Use the following ling if you want to #include Matlab header files.
+# Be sure to #include Matlab header files _before_ #including CarMaker4SL.h.
+#CFLAGS +=	$(MAT_CFLAGS)
+
+LD_LIBS = $(CAR4SL_LIB) $(CARMAKER4SL_LIB) $(DRIVER_LIB) $(ROAD_LIB) $(TIRE_LIB)
+
+OBJ_APP = ../app_tmp.cm4sl.o
+
+
+# Prepend local include/library directory to include path:
+# PREINC_CFLAGS +=	-I../../include -I../../lib/$(ARCH) -I../../lib
+
+# Append local include/library directory to include path:
+# INC_CFLAGS +=		-I../../include -I../../lib/$(ARCH) -I../../lib
+
+
+### Linking with RTW-built Simulink models
+
+#LD_LIBS +=		$(MATSUPP_LIB)
+
+#OBJS += libSimuModel_$(ARCH).a
+
+# @@PLUGIN-BEGIN-ECLIBS@@ - Automatically generated code - don't edit!
+# @@PLUGIN-END@@
+
+### END (Linking with RTW-built Simulink models)
+
+
+OBJS_CM4SL =  $(patsubst %.o,%.cm4sl.o,$(OBJS))

@@ -1,0 +1,129 @@
+#INFOFILE1.1 - Do not remove this line!
+FileIdent = CarMaker-OutputQuantities 1
+
+DStore.Format = erg
+DStore.dt.fast = 0.001
+DStore.dt.normal = 0.01
+DStore.dt.slow = 0.1
+
+DStore.Quantities.fast:
+
+DStore.Quantities.normal:
+	AccelCtrl.ACC.DesiredAx
+	AccelCtrl.ACC.DesiredDist
+	AccelCtrl.ACC.DesiredSpd
+	AccelCtrl.ACC.DesiredTGap
+	Brake.Hyd.Sys.pMC
+	Brake.Hyd.Sys.pWB_*
+	Car.CF*.rx
+	Car.CF*.ry
+	Car.CF*.rz
+	Car.CR*.rx
+	Car.CR*.ry
+	Car.CR*.rz
+	Car.CF*.tx
+	Car.CF*.ty
+	Car.CF*.tz
+	Car.CR*.tx
+	Car.CR*.ty
+	Car.CR*.tz
+	Car.Distance
+	Car.Fr1.rx
+	Car.Fr1.ry
+	Car.Fr1.rz
+	Car.Fr1.tx
+	Car.Fr1.ty
+	Car.Fr1.tz
+	Car.Fx*
+	Car.Fy*
+	Car.Fz*
+	Car.Gen.ax_1
+	Car.Gen.ay_1
+	Car.Gen.vx_1
+	Car.LongSlip*
+	Car.Pitch
+	Car.Roll
+	Car.SideSlipAngle
+	Car.TrqAlign*
+	Car.TrqOvert*
+	Car.TrqRoll*
+	Car.W*.rot
+	Car.Yaw
+	Car.YawRate
+	Car.ax
+	Car.ay
+	Car.muRoad*
+	Car.tx
+	Car.ty
+	Car.v
+	Car.vFL
+	Car.vFR
+	Car.vRL
+	Car.vRR
+	Sensor.Object.RadarL.relvTgt.NearPnt.ds_p
+	DM.Brake
+	DM.BrakeLever
+	DM.Clutch
+	DM.Gas
+	DM.GearNo
+	DM.ManDist
+	DM.ManNo
+	DM.Steer.Ang
+	DM.Steer.Trq
+	MC.Distance
+	MC.Gen.a_1.*
+	MC.Pitch*
+	MC.Roll*
+	MC.TF.Frc.*
+	MC.TF.LongSlip
+	MC.TF.SlipAngle
+	MC.TR.Frc.*
+	MC.TR.LongSlip
+	MC.TR.SlipAngle
+	MC.Yaw*
+	MC.alHori
+	MC.atHori
+	MC.v
+	PT.Clutch.Trq_out
+	PT.Control.Consump.Fuel.Abs
+	PT.Control.Consump.Fuel.Act
+	PT.Control.Consump.Fuel.Avg
+	PT.Engine.Trq
+	PT.Engine.be
+	PT.Engine.rot
+	PT.Engine.rotv
+	PT.W*.rotv
+	PT.WF.*
+	PT.WR.*
+	PwrD.Tire.CambDeflFL
+	PwrD.Tire.CambDeflFR
+	PwrD.Tire.LatSlipFL
+	PwrD.Tire.LatSlipFR
+	PwrD.Tire.LongSlipFL
+	PwrD.Tire.LongSlipFR
+	PwrD.Tire.RollResistFL
+	PwrD.Tire.RollResistFR
+	PwrD.Tire.ToeSlipFL
+	PwrD.Tire.ToeSlipFR
+	PwrD.Tire.TotalFL
+	PwrD.Tire.TotalFR
+	PwrL.Aero
+	PwrL.Brake
+	PwrL.PT
+	PwrL.Tire
+	PwrL.Total
+	PwrS.Aero
+	PwrS.Brake
+	PwrS.PT
+	PwrS.Tire
+	PwrS.Total
+	Steer.WhlAng
+	Time
+	Traffic.Ahead.*
+	Traffic.Sheer.*
+	Vhcl.*.LongSlip
+	Vhcl.*.SideSlip
+	Vhcl.sRoad
+
+DStore.Quantities.slow:
+
