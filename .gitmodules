@@ -1,0 +1,3 @@
+[submodule "ros/Aslan"]
+	path = ros/Aslan
+	url = https://github.com/project-aslan/Aslan

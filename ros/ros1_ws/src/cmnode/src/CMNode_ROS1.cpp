@@ -65,6 +65,7 @@
 #include "sd_vehicle_interface/sd_vehicle_interface.h" /* ASLAN SD Vehicle interface */
 #include "sensor_msgs/PointCloud2.h"    /* ROS PointCloud2 for sensor inputs */
 #include "sensor_msgs/NavSatFix.h"      /* ROS Navigation Satellite fix */
+#include "geometry_msgs/TwistStamped.h" /* ROS Twist command */
 
 /* Following header from external ROS node can be used to get topic/service/... names
 * Other mechanism:
@@ -120,20 +121,20 @@ static struct {
     unsigned long  CycleNoRel;  /*!< CarMaker relative cycle number, e.g. since start of TestRun */
 
     struct {
-        double         Duration;      /*!< Time spent for synchronization task */
-        int            nCycles;       /*!< Number of cycles in synchronization loop */
-        int            CyclePrepDone; /*!< Last cycle when preparation was done */
-        int            CycleJobDone;  /*!< Last cycle when job was done */
-        double         SynthDelay;    /*!< Synthetic delay in seconds provided to external node to check sync */
+        double          Duration;      /*!< Time spent for synchronization task */
+        int             nCycles;       /*!< Number of cycles in synchronization loop */
+        int             CyclePrepDone; /*!< Last cycle when preparation was done */
+        int             CycleJobDone;  /*!< Last cycle when job was done */
+        double          SynthDelay;    /*!< Synthetic delay in seconds provided to external node to check sync */
     } Sync; /*!< Synchronization related information */
 
     struct {
-        int CycleNo;      /*!< Cycle number of external ROS Node (only for information) */
+        int             CycleNo;      /*!< Cycle number of external ROS Node (only for information) */
 
         /* For debugging */
-        int            CycleLastOut;   /*!< Cycle number when Topic was published */
-        int            CycleLastIn;    /*!< Cycle number when Topic from external ROS Node was received */
-        int            CycleLastFlush; /*!< Cycle number when data from external ROS Node was provided to model */
+        int             CycleLastOut;   /*!< Cycle number when Topic was published */
+        int             CycleLastIn;    /*!< Cycle number when Topic from external ROS Node was received */
+        int             CycleLastFlush; /*!< Cycle number when data from external ROS Node was provided to model */
     } Model; /*!< Model related information. ROS side! */
 
     struct {
@@ -143,6 +144,10 @@ static struct {
 
         struct {
             tRosIF_TpcPub<sensor_msgs::NavSatFix> GPS;
+            tRosIF_TpcPub<sensor_msgs::PointCloud2> LidarRSI;
+            tRosIF_TpcPub<sensor_msgs::PointCloud2> RadarRSI;
+            tRosIF_TpcPub<geometry_msgs::TwistStamped> Velocity;
+
 
             /*!< CarMaker can be working as ROS Time Server providing simulation time
             *   starting at 0 for each TestRun */
@@ -193,6 +198,18 @@ static struct {
             int             UpdRate;
             int             nCycleOffset;
         } GNav;
+
+        struct {
+            double*         pos;           /*!< Mounting position on vehicle frame */
+            int             UpdRate;
+            int             nCycleOffset;
+        } LidarRSI;
+
+        struct {
+            double*         pos;           /*!< Mounting position on vehicle frame */
+            int             UpdRate;
+            int             nCycleOffset;
+        } RadarRSI;
     } Sensor; /*!< Sensor parameters */
 
 
@@ -374,9 +391,28 @@ extern "C" {
         /* NavSatFix pub */
         strcpy(sbuf, "/sd_current_GPS");
         LOG("  -> Publish '%s'", sbuf);
-        CMNode.Topics.Pub.GPS.Pub         = node->advertise<sensor_msgs::NavSatFix>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
-        CMNode.Topics.Pub.GPS.Job         = CMCRJob_Create("NavSatFix");
+        CMNode.Topics.Pub.GPS.Pub           = node->advertise<sensor_msgs::NavSatFix>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.GPS.Job           = CMCRJob_Create("NavSatFix");
 
+        /* LiDAR RSI pub */
+        strcpy(sbuf, "/points_raw");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.LidarRSI.Pub      = node->advertise<sensor_msgs::PointCloud2>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.LidarRSI.Job      = CMCRJob_Create("LiDAR");
+
+        /* RADAR RSI pub */
+        strcpy(sbuf, "/radar_data");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.RadarRSI.Pub      = node->advertise<sensor_msgs::PointCloud2>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.RadarRSI.Job      = CMCRJob_Create("RADAR");
+
+        /* Vehicle Velocity pub */
+        strcpy(sbuf, "/current_velocity");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.Velocity.Pub      = node->advertise<geometry_msgs::TwistStamped>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.Velocity.Job      = CMCRJob_Create("Velocity");
+        CMNode.Topics.Pub.Velocity.CycleTime = 1;
+        CMNode.Topics.Pub.Velocity.CycleOffset = 0;
 
         /* Subscribe specific */
         CMNode.Cfg.QueueSub  = iGetIntOpt(Inf, "Node.QueueSub", 1); /* ToDo: Effect of queue length for subscriber? */
@@ -530,9 +566,23 @@ extern "C" {
         CMNode.PowerTrain.Control.GasInterpret.TrqFull  = iGetDblOpt(Inf_Vhcl, "PowerTrain.Control.GasInterpret.TrqFull", 400.0);
         CMNode.PowerTrain.Control.GasInterpret.TrqZero  = iGetDblOpt(Inf_Vhcl, "PowerTrain.Control.GasInterpret.TrqZero", -10.0);
         CMNode.Wheel.RL.pos                             = iGetFixedTable2(Inf_Vhcl, "Wheel.rl.pos", 3, 1);
+
+        /* Global Navigation */
         CMNode.Sensor.GNav.pos                          = iGetFixedTable2(Inf_Vhcl, "Sensor.GNav.pos", 3, 1);
-        CMNode.Sensor.GNav.UpdRate                      = iGetIntOpt(Inf_Vhcl, "Sensor.GNav.UpdRate", 10);
+        CMNode.Sensor.GNav.UpdRate                      = 1000.0/iGetIntOpt(Inf_Vhcl, "Sensor.GNav.UpdRate", 10);       /* Convert from update rate in Hz to cycle time in ms */
         CMNode.Sensor.GNav.nCycleOffset                 = iGetIntOpt(Inf_Vhcl, "Sensor.GNav.nCycleOffset", 0);
+
+        /* LiDAR RSI */
+        CMNode.Sensor.LidarRSI.pos                      = iGetFixedTable2(Inf_Vhcl, "Sensor.LidarRSI.0.pos", 3, 1);
+        CMNode.Sensor.LidarRSI.UpdRate                  = iGetIntOpt(Inf_Vhcl, "Sensor.LidarRSI.0.CycleTime", 10);
+        CMNode.Sensor.LidarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, "Sensor.LidarRSI.0.nCycleOffset", 0);
+        CMNode.Sensor.LidarRSI.nCycleOffset            *= iGetIntOpt(Inf_Vhcl, "Sensor.LidarRSI.CycleOffsetIgnore", 0); /* Set offset to 0 if ingnored in CarMaker */
+
+        /* RADAR RSI */
+        CMNode.Sensor.RadarRSI.pos                      = iGetFixedTable2(Inf_Vhcl, "Sensor.RadarRSI.0.pos", 3, 1);
+        CMNode.Sensor.RadarRSI.UpdRate                  = iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.0.CycleTime", 10);
+        CMNode.Sensor.RadarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.0.nCycleOffset", 0);
+        CMNode.Sensor.RadarRSI.nCycleOffset            *= iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.CycleOffsetIgnore", 0); /* Set offset to 0 if ingnored in CarMaker */
 
 
         /* Read the Environmental Infofile */
@@ -655,22 +705,35 @@ return -1;
 *   - Topic in and Topic out use same cycle time with relative shift!
 */
 
-
-/* SDControl sub */
+/* SDControl sub job */
 job         = CMNode.Topics.Sub.SDC.Job;
 cycletime   = CMNode.Topics.Sub.SDC.CycleTime;
 cycleoff    = CMNode.Topics.Sub.SDC.CycleOffset;
-
 CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
 
-/* NavSatFix pub */
+/* GPS pub job */
 job         = CMNode.Topics.Pub.GPS.Job;
-cycletime   = 1000.0/CMNode.Sensor.GNav.UpdRate;    /* Convert from update rate in Hz to cycle time in ms */
+cycletime   = CMNode.Sensor.GNav.UpdRate;
 cycleoff    = CMNode.Sensor.GNav.nCycleOffset;
-
-
 CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
 
+/* LiDAR RSI pub job */
+job         = CMNode.Topics.Pub.LidarRSI.Job;
+cycletime   = CMNode.Sensor.LidarRSI.UpdRate;
+cycleoff    = CMNode.Sensor.LidarRSI.nCycleOffset;
+CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
+
+/* RADAR RSI pub job */
+job         = CMNode.Topics.Pub.RadarRSI.Job;
+cycletime   = CMNode.Sensor.RadarRSI.UpdRate;
+cycleoff    = CMNode.Sensor.RadarRSI.nCycleOffset;
+CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
+
+/* Vehicle Velocity sub job */
+job         = CMNode.Topics.Pub.Velocity.Job;
+cycletime   = CMNode.Topics.Pub.Velocity.CycleTime;
+cycleoff    = CMNode.Topics.Pub.Velocity.CycleOffset;
+CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
 
 /* Synchronization with external node
 * - external node provides cycle time (see service above)
@@ -973,6 +1036,7 @@ CMRosIF_CMNode_Calc (double dt)
         return 0;
     }
 
+    /* Publish GPS data from CarMaker */
     if (CMNode.Sensor.GNav.Active) {
         if ((rv = CMCRJob_DoJob(CMNode.Topics.Pub.GPS.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
             LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.GPS.Job), CMCRJob_RVStr(rv));
@@ -987,10 +1051,6 @@ CMRosIF_CMNode_Calc (double dt)
             CMNode.Topics.Pub.GPS.Msg.latitude = GNavSensor.Receiver.UserPosLlhTsa[0];
             CMNode.Topics.Pub.GPS.Msg.longitude = GNavSensor.Receiver.UserPosLlhTsa[1];
             CMNode.Topics.Pub.GPS.Msg.altitude = GNavSensor.Receiver.UserPosLlhTsa[2];
-            LOG("  -> GPS Lat: %f; Long: %f, Alt: %f",
-                GNavSensor.Receiver.UserPosLlhTsa[0],
-                GNavSensor.Receiver.UserPosLlhTsa[1],
-                GNavSensor.Receiver.UserPosLlhTsa[2]);
 
             /* Use ideal covariance matrix with the exact receiver position */
             int ideal_cov[] = {1,0,0,0,1,0,0,0,1};
@@ -999,6 +1059,159 @@ CMRosIF_CMNode_Calc (double dt)
             }
             CMNode.Topics.Pub.GPS.Msg.position_covariance_type = 2; /* Assume this is a covariance matrix of known diagonal */
         }
+    }
+
+    /* Publish LiDAR RSI data from CarMaker */
+    if ((rv = CMCRJob_DoJob(CMNode.Topics.Pub.LidarRSI.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
+        LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.LidarRSI.Job), CMCRJob_RVStr(rv));
+    } else {
+
+        sensor_msgs::PointField field;
+
+        /* Frame header */
+        CMNode.Topics.Pub.LidarRSI.Msg.header.frame_id = "Fr1";
+        CMNode.Topics.Pub.LidarRSI.Msg.header.stamp = ros::Time(LidarRSI[0].ScanTime);
+
+        /* Unordered cloud with the number of scanned points of the LiDAR */
+        CMNode.Topics.Pub.LidarRSI.Msg.height = 1;
+        CMNode.Topics.Pub.LidarRSI.Msg.width = LidarRSI[0].nScanPoints;
+
+        /* Field: x */
+        field.name = "x";
+        field.offset = 0;
+        field.datatype = 8;              /* double */
+        field.count = 1;
+        CMNode.Topics.Pub.LidarRSI.Msg.fields.push_back(field);
+
+        /* Field: y */
+        field.name = "y";
+        field.offset = 8;
+        CMNode.Topics.Pub.LidarRSI.Msg.fields.push_back(field);
+
+        /* Field: z */
+        field.name = "z";
+        field.offset = 16;
+        CMNode.Topics.Pub.LidarRSI.Msg.fields.push_back(field);
+
+        /* Field: intensity (nW) */
+        field.name = "intensity";
+        field.offset = 24;
+        CMNode.Topics.Pub.LidarRSI.Msg.fields.push_back(field);
+
+        int point_step = 32;
+        CMNode.Topics.Pub.LidarRSI.Msg.is_bigendian = 1;
+        CMNode.Topics.Pub.LidarRSI.Msg.point_step = point_step;
+        CMNode.Topics.Pub.LidarRSI.Msg.row_step = point_step * LidarRSI[0].nScanPoints;
+        CMNode.Topics.Pub.LidarRSI.Msg.is_dense = 1;
+
+        /* Create the output data binary blob */
+        int data_idx;
+        uint8_t data[CMNode.Topics.Pub.LidarRSI.Msg.row_step];
+        for (int ii = 0; ii < LidarRSI[0].nScanPoints; ii++) {
+            data_idx = ii*point_step;
+            uint8_t* x = reinterpret_cast<uint8_t*>(&LidarRSI[0].ScanPoint[ii].Origin[0]);
+            uint8_t* y = reinterpret_cast<uint8_t*>(&LidarRSI[0].ScanPoint[ii].Origin[1]);
+            uint8_t* z = reinterpret_cast<uint8_t*>(&LidarRSI[0].ScanPoint[ii].Origin[2]);
+            uint8_t* i = reinterpret_cast<uint8_t*>(&LidarRSI[0].ScanPoint[ii].Intensity);
+            std::copy(x, x+8, data+data_idx+0);
+            std::copy(y, y+8, data+data_idx+8);
+            std::copy(z, z+8, data+data_idx+16);
+            std::copy(i, i+8, data+data_idx+24);
+        }
+
+        /* Add the binary data to the message */
+        for (int ii = 0; ii < CMNode.Topics.Pub.LidarRSI.Msg.row_step; ii++) {
+           CMNode.Topics.Pub.LidarRSI.Msg.data.push_back(data[ii]);
+        }
+
+    }
+
+    /* Publish RADAR RSI data from CarMaker */
+    if ((rv = CMCRJob_DoJob(CMNode.Topics.Pub.RadarRSI.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
+        LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.RadarRSI.Job), CMCRJob_RVStr(rv));
+    } else {
+
+        sensor_msgs::PointField field;
+
+        /* Frame header */
+        CMNode.Topics.Pub.RadarRSI.Msg.header.frame_id = "Fr1";
+        CMNode.Topics.Pub.RadarRSI.Msg.header.stamp = ros::Time(RadarRSI[0].TimeFired);
+
+        /* Unordered cloud with the number of scanned points of the LiDAR */
+        CMNode.Topics.Pub.RadarRSI.Msg.height = 1;
+        CMNode.Topics.Pub.RadarRSI.Msg.width = RadarRSI[0].nDetections;
+
+        /* Field: x */
+        field.name = "x";
+        field.offset = 0;
+        field.datatype = 8;              /* double */
+        field.count = 1;
+        CMNode.Topics.Pub.RadarRSI.Msg.fields.push_back(field);
+
+        /* Field: y */
+        field.name = "y";
+        field.offset = 8;
+        CMNode.Topics.Pub.RadarRSI.Msg.fields.push_back(field);
+
+        /* Field: z */
+        field.name = "z";
+        field.offset = 16;
+        CMNode.Topics.Pub.RadarRSI.Msg.fields.push_back(field);
+
+        /* Field: velocity (m/s) */
+        field.name = "velocity";
+        field.offset = 24;
+        CMNode.Topics.Pub.RadarRSI.Msg.fields.push_back(field);
+
+        /* Field: power (dBm) */
+        field.name = "power";
+        field.offset = 32;
+        CMNode.Topics.Pub.RadarRSI.Msg.fields.push_back(field);
+
+        int point_step = 40;
+        CMNode.Topics.Pub.RadarRSI.Msg.is_bigendian = 1;
+        CMNode.Topics.Pub.RadarRSI.Msg.point_step = point_step;
+        CMNode.Topics.Pub.RadarRSI.Msg.row_step = point_step * RadarRSI[0].nDetections;
+        CMNode.Topics.Pub.RadarRSI.Msg.is_dense = 1;
+
+        /* Create the output data binary blob */
+        int data_idx;
+        uint8_t data[CMNode.Topics.Pub.RadarRSI.Msg.row_step];
+        for (int ii = 0; ii < RadarRSI[0].nDetections; ii++) {
+            data_idx = ii*point_step;
+            uint8_t* x = reinterpret_cast<uint8_t*>(&RadarRSI[0].DetPoints[ii].Coordinates[0]);
+            uint8_t* y = reinterpret_cast<uint8_t*>(&RadarRSI[0].DetPoints[ii].Coordinates[1]);
+            uint8_t* z = reinterpret_cast<uint8_t*>(&RadarRSI[0].DetPoints[ii].Coordinates[2]);
+            uint8_t* v = reinterpret_cast<uint8_t*>(&RadarRSI[0].DetPoints[ii].Velocity);
+            uint8_t* p = reinterpret_cast<uint8_t*>(&RadarRSI[0].DetPoints[ii].Power);
+            std::copy(x, x+8, data+data_idx+0);
+            std::copy(y, y+8, data+data_idx+8);
+            std::copy(z, z+8, data+data_idx+16);
+            std::copy(v, v+8, data+data_idx+24);
+            std::copy(p, p+8, data+data_idx+32);
+        }
+
+        /* Add the binary data to the message */
+        for (int ii = 0; ii < CMNode.Topics.Pub.RadarRSI.Msg.row_step; ii++) {
+           CMNode.Topics.Pub.RadarRSI.Msg.data.push_back(data[ii]);
+        }
+
+    }
+
+    /* Publish vehicle velocity data from CarMaker */
+    if ((rv = CMCRJob_DoJob(CMNode.Topics.Pub.Velocity.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
+        LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.Velocity.Job), CMCRJob_RVStr(rv));
+    } else {
+        CMNode.Topics.Pub.Velocity.Msg.header.frame_id = "Fr1";
+        CMNode.Topics.Pub.Velocity.Msg.header.stamp = ros::Time(SimCore.Time);
+
+        /* Publish linear velocity only in the X direction */
+        CMNode.Topics.Pub.Velocity.Msg.twist.linear.x = Vehicle.v;
+        CMNode.Topics.Pub.Velocity.Msg.twist.linear.y = 0;
+        CMNode.Topics.Pub.Velocity.Msg.twist.linear.z = 0;
+        CMNode.Topics.Pub.Velocity.Msg.twist.angular.x = 0;
+        CMNode.Topics.Pub.Velocity.Msg.twist.angular.y = 0;
+        CMNode.Topics.Pub.Velocity.Msg.twist.angular.z = 0;
     }
 
     /* Remember cycle for debugging */
@@ -1014,24 +1227,27 @@ CMRosIF_CMNode_Calc (double dt)
     * - This data handling is optionl, but necessary for deterministic behaviour
     * - if synchronization is active, incoming data remains in msg buffer until correct cycle
     */
-    // int rv;
-    // auto sync = &CMNode.Topics.Sub.Ext2CM;
-    //
-    // if ((rv = CMCRJob_DoJob(sync->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing
-    // && rv != CMCRJob_RV_DoSomething) {
-    //     LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s", CMCRJob_GetName(sync->Job), CMCRJob_RVStr(rv));
-    // } else if (rv == CMCRJob_RV_DoSomething) {
-    //     /* Something to do in sync cycle? */
-    //     //CMCRJob_Info(in->Job, CMNode.CycleNoRel, "CMNode: Do Something for Sync: ");
-    //
-    //     /* Update model parameters here? */
-    //     CMNode.Model.CycleNo = CMNode.Topics.Sub.Ext2CM.Msg.cycleno;
-    //
-    //
-    //     /* Remember cycle for debugging */
-    //     CMNode.Sync.CycleJobDone    = CMNode.CycleNoRel;
-    //     CMNode.Model.CycleLastFlush = CMNode.CycleNoRel;
-    // }
+    /*
+    int rv;
+    auto sync = &CMNode.Topics.Sub.Ext2CM;
+
+    if ((rv = CMCRJob_DoJob(sync->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing
+    && rv != CMCRJob_RV_DoSomething) {
+        LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s", CMCRJob_GetName(sync->Job), CMCRJob_RVStr(rv));
+    } else if (rv == CMCRJob_RV_DoSomething) {
+    */
+        /* Something to do in sync cycle? */
+        //CMCRJob_Info(in->Job, CMNode.CycleNoRel, "CMNode: Do Something for Sync: ");
+
+        /* Update model parameters here? *
+        CMNode.Model.CycleNo = CMNode.Topics.Sub.Ext2CM.Msg.cycleno;
+
+
+        * Remember cycle for debugging *
+        CMNode.Sync.CycleJobDone    = CMNode.CycleNoRel;
+        CMNode.Model.CycleLastFlush = CMNode.CycleNoRel;
+    }
+    */
 
     /* Do some calculation... */
 
@@ -1061,12 +1277,10 @@ CMRosIF_CMNode_Out (void)
 
     int rv;
 
+    /* Publish SatNav messages */
     if (CMNode.Sensor.GNav.Active) {
         auto out_gps = &CMNode.Topics.Pub.GPS;
 
-        /* Communicate to External ROS Node in this cycle?
-        * - The job mechanism is optional and can be e.g. replaced by simple modulo on current cycle
-        */
         if ((rv = CMCRJob_DoJob(out_gps->Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
             LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_gps->Job), CMCRJob_RVStr(rv));
         } else if (rv == CMCRJob_RV_DoSomething) {
@@ -1078,6 +1292,49 @@ CMRosIF_CMNode_Out (void)
             CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
         }
     }
+
+    /* Publish LiDAR PointCooud2 messages */
+    auto out_lidar = &CMNode.Topics.Pub.LidarRSI;
+
+    if ((rv = CMCRJob_DoJob(out_lidar->Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+        LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_lidar->Job), CMCRJob_RVStr(rv));
+    } else if (rv == CMCRJob_RV_DoSomething) {
+
+        /* Publish message to output */
+        out_lidar->Pub.publish(out_lidar->Msg);
+
+        /* Remember cycle for debugging */
+        CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+    }
+
+    /* Publish RADAR PointCooud2 messages */
+    auto out_radar = &CMNode.Topics.Pub.RadarRSI;
+
+    if ((rv = CMCRJob_DoJob(out_radar->Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+        LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_radar->Job), CMCRJob_RVStr(rv));
+    } else if (rv == CMCRJob_RV_DoSomething) {
+
+        /* Publish message to output */
+        out_radar->Pub.publish(out_radar->Msg);
+
+        /* Remember cycle for debugging */
+        CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+    }
+
+    /* Publish vehicle velocity messages */
+    auto out_vel = &CMNode.Topics.Pub.Velocity;
+
+    if ((rv = CMCRJob_DoJob(out_vel->Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+        LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_vel->Job), CMCRJob_RVStr(rv));
+    } else if (rv == CMCRJob_RV_DoSomething) {
+
+        /* Publish message to output */
+        out_vel->Pub.publish(out_vel->Msg);
+
+        /* Remember cycle for debugging */
+        CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+    }
+
 
     // auto out = &CMNode.Topics.Pub.CM2Ext;
     //

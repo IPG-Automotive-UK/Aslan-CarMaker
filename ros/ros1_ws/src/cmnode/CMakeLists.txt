@@ -45,6 +45,7 @@ find_package(catkin REQUIRED COMPONENTS
    cmrosutils
    aslan_msgs
    sd_vehicle_interface
+   sensor_msgs
 )
 
 
@@ -135,7 +136,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   #INCLUDE_DIRS include
-  CATKIN_DEPENDS message_runtime cmrosutils aslan_msgs sd_vehicle_interface
+  CATKIN_DEPENDS message_runtime cmrosutils aslan_msgs sd_vehicle_interface sensor_msgs
   LIBRARIES ${CMNODE_BUILD_NAME}
   #  DEPENDS system_lib
 )
