@@ -34,6 +34,9 @@ else()
     message(FATAL_ERROR "'${CARMAKER_INC_DIR}' does not exist!")
 endif()
 
+###   Add the ASLAN build to the CMAKE_PREFIX_PATH   ###
+list(APPEND CMAKE_PREFIX_PATH "${CMAKE_SOURCE_DIR}/../../Aslan/devel")
+
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

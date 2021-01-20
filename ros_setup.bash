@@ -9,18 +9,19 @@
 # - Used paths are expected relative to location of this script file
 #
 # ToDo:
-# - Error handling for 
+# - Error handling for
 #   - Do not use shell's "set -e"! Error handling with sourcing scripts may fail
 #
 # Creator: IPG Automotive GmbH/fs
-# 
+#
 
 echo "Execute: ${BASH_SOURCE[0]}";
 
 
 # General Settings
 _str="ros1";
-_dir_script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"; 
+_str_ASLAN="Aslan";
+_dir_script="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)";
 
 
 ###   Help functions   ###
@@ -42,6 +43,7 @@ _cmd_warn() { echo -e "\033[1;31m  Warning:${2}\n  -> run '${1}'\033[0m"; eval $
 
 # Local ROS workspace
 _cmd_echo "source \"${_dir_script}/ros/${_str}_ws/devel/setup.bash\""
+_cmd_echo "source \"${_dir_script}/ros/${_str_ASLAN}/devel/setup.bash\""
 #_cmd_echo "source \"${_dir_script}/ros/${_str}_ws/install/setup.bash\""
 
 echo "  -> LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
@@ -50,4 +52,3 @@ echo "  -> LD_LIBRARY_PATH=${LD_LIBRARY_PATH}"
 # Cleanup (You may have been working directly inside a shell environment!)
 unset _str _dir_script
 unset -f _cmd_echo _cmd_warn
-
