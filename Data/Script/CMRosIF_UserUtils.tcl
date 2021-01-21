@@ -38,7 +38,7 @@ namespace eval ::MyCMRosIFUtils {
 
         # Add a tab to default Terminal
         # TerminalCmd addTab default "source ros_setup.bash; roslaunch --wait hellocm hellocm.launch use_sim_time:=true;exec /bin/bash -i"
-	    TerminalCmd addTab "ASLAN" "ros/ros1_ws/run"
+	    TerminalCmd addTab "ASLAN" "ros/Aslan/run"
 
         # Global settings for Terminals
         # Timeout for starting/stopping processes [ms]
