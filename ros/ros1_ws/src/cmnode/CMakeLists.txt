@@ -49,6 +49,9 @@ find_package(catkin REQUIRED COMPONENTS
    aslan_msgs
    sd_vehicle_interface
    sensor_msgs
+   geometry_msgs
+   tf2
+   tf2_ros
 )
 
 
