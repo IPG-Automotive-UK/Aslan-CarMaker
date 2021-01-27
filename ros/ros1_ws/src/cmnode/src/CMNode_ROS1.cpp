@@ -62,11 +62,9 @@
 #include "cmrosutils/CMRosIF_Utils.h"   /* Only for CarMaker ROS Node!!! Functions are located in library for CarMaker ROS Interface */
 
 /* ROS */
-#include "ros/ros.h"
 #include "sensor_msgs/PointCloud2.h"                    /* ROS PointCloud2 for sensor inputs */
 #include "sensor_msgs/NavSatFix.h"                      /* ROS Navigation Satellite fix */
 #include "geometry_msgs/TwistStamped.h"                 /* ROS Twist command */
-#include "geometry_msgs/TransformStamped.h"             /* ROS Transform command */
 #include "tf2/LinearMath/Quaternion.h"                  /* Ros TF2 quaternion */
 #include "tf2_ros/transform_broadcaster.h"              /* Publish TF2 transforms */
 
@@ -1064,6 +1062,7 @@ CMRosIF_CMNode_Calc (double dt)
 {
     int rv;
     uint8_t *ptr;
+    int point_step, row_step;
 
     /* Only do anything if simulation is running */
     if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
@@ -1074,7 +1073,7 @@ CMRosIF_CMNode_Calc (double dt)
     if (CMNode.Sensor.GNav.Active) {
         if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.GPS.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
             LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.GPS.Job), CMCRJob_RVStr(rv));
-        } else {
+        } else if (rv == CMCRJob_RV_DoSomething) {
             CMNode.Topics.Pub.GPS.Msg.header.frame_id = "Fr0";
             CMNode.Topics.Pub.GPS.Msg.header.stamp = ros::Time(SimCore.Time);
 
@@ -1099,7 +1098,7 @@ CMRosIF_CMNode_Calc (double dt)
     if (CMNode.Sensor.LidarRSI.N > 0) {
         if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.LidarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
             LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.LidarRSI.Job), CMCRJob_RVStr(rv));
-        } else {
+        } else if (rv == CMCRJob_RV_DoSomething) {
 
             /* Frame header */
             CMNode.Topics.Pub.LidarRSI.Msg.header.frame_id = "Fr0";
@@ -1138,61 +1137,65 @@ CMRosIF_CMNode_Calc (double dt)
             /* Field: Origin.x of reflection */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[4].name = "x";
             CMNode.Topics.Pub.LidarRSI.Msg.fields[4].offset = 24;
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[4].datatype = 8;              /* double */
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[4].datatype = 7;              /* float */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[4].count = 1;
 
             /* Field: Origin.y of reflection */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[5].name = "y";
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[5].offset = 32;
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[5].datatype = 8;              /* double */
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[5].offset = 28;
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[5].datatype = 7;              /* float */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[5].count = 1;
 
             /* Field: Origin.z of reflection */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[6].name = "z";
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[6].offset = 40;
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[6].datatype = 8;              /* double */
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[6].offset = 32;
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[6].datatype = 7;              /* float */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[6].count = 1;
 
             /* Field: Intensity (nW) */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[7].name = "intensity";
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[7].offset = 48;
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[7].offset = 36;
             CMNode.Topics.Pub.LidarRSI.Msg.fields[7].datatype = 8;              /* double */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[7].count = 1;
 
             /* Field: Pulse width (ns) */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[8].name = "pulse_width";
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[8].offset = 56;
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[8].offset = 44;
             CMNode.Topics.Pub.LidarRSI.Msg.fields[8].datatype = 8;              /* double */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[8].count = 1;
 
             /* Field: Number of reflections */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[9].name = "reflections";
-            CMNode.Topics.Pub.LidarRSI.Msg.fields[9].offset = 64;
+            CMNode.Topics.Pub.LidarRSI.Msg.fields[9].offset = 52;
             CMNode.Topics.Pub.LidarRSI.Msg.fields[9].datatype = 5;              /* int32 */
             CMNode.Topics.Pub.LidarRSI.Msg.fields[9].count = 1;
 
-            int point_step = 68;
+            point_step = 56;
+            row_step = point_step * LidarRSI[0].nScanPoints;
             CMNode.Topics.Pub.LidarRSI.Msg.is_bigendian = false;
             CMNode.Topics.Pub.LidarRSI.Msg.point_step = point_step;
-            CMNode.Topics.Pub.LidarRSI.Msg.row_step = point_step * LidarRSI[0].nScanPoints;
+            CMNode.Topics.Pub.LidarRSI.Msg.row_step = row_step;
             CMNode.Topics.Pub.LidarRSI.Msg.is_dense = true;
 
             /* Create the output data binary blob */
-            CMNode.Topics.Pub.LidarRSI.Msg.data.resize(CMNode.Topics.Pub.LidarRSI.Msg.row_step);
-            ptr = CMNode.Topics.Pub.LidarRSI.Msg.data.data();
+            CMNode.Topics.Pub.LidarRSI.Msg.data.resize(row_step);
+            uint8_t dataL[row_step];
+            ptr = dataL;
+
             for (int ii = 0; ii < LidarRSI[0].nScanPoints; ii++) {
                 *(reinterpret_cast<uint32_t*>(ptr +  0)) = LidarRSI[0].ScanPoint[ii].BeamID;
                 *(reinterpret_cast<uint32_t*>(ptr +  4)) = LidarRSI[0].ScanPoint[ii].EchoID;
                 *(reinterpret_cast<double*>(ptr +  8)) = LidarRSI[0].ScanPoint[ii].TimeOF;
                 *(reinterpret_cast<double*>(ptr + 16)) = LidarRSI[0].ScanPoint[ii].LengthOF;
-                *(reinterpret_cast<double*>(ptr + 24)) = LidarRSI[0].ScanPoint[ii].Origin[0];
-                *(reinterpret_cast<double*>(ptr + 32)) = LidarRSI[0].ScanPoint[ii].Origin[1];
-                *(reinterpret_cast<double*>(ptr + 40)) = LidarRSI[0].ScanPoint[ii].Origin[2];
-                *(reinterpret_cast<double*>(ptr + 48)) = LidarRSI[0].ScanPoint[ii].Intensity;
-                *(reinterpret_cast<double*>(ptr + 56)) = LidarRSI[0].ScanPoint[ii].PulseWidth;
-                *(reinterpret_cast<uint32_t*>(ptr + 64)) = LidarRSI[0].ScanPoint[ii].nRefl;
+                *(reinterpret_cast<float*>(ptr + 24)) = (float) LidarRSI[0].ScanPoint[ii].Origin[0];
+                *(reinterpret_cast<float*>(ptr + 28)) = (float) LidarRSI[0].ScanPoint[ii].Origin[1];
+                *(reinterpret_cast<float*>(ptr + 32)) = (float) LidarRSI[0].ScanPoint[ii].Origin[2];
+                *(reinterpret_cast<double*>(ptr + 36)) = LidarRSI[0].ScanPoint[ii].Intensity;
+                *(reinterpret_cast<double*>(ptr + 44)) = LidarRSI[0].ScanPoint[ii].PulseWidth;
+                *(reinterpret_cast<uint32_t*>(ptr + 52)) = LidarRSI[0].ScanPoint[ii].nRefl;
                 ptr += point_step;
             }
+            std::copy(dataL, dataL + row_step, CMNode.Topics.Pub.LidarRSI.Msg.data.data());
         }
     }
 
@@ -1200,7 +1203,7 @@ CMRosIF_CMNode_Calc (double dt)
     if (CMNode.Sensor.RadarRSI.N > 0) {
         if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.RadarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
             LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.RadarRSI.Job), CMCRJob_RVStr(rv));
-        } else {
+        } else if (rv == CMCRJob_RV_DoSomething) {
 
             /* Frame header */
             CMNode.Topics.Pub.RadarRSI.Msg.header.frame_id = "Fr_RadarRSI";
@@ -1215,53 +1218,54 @@ CMRosIF_CMNode_Calc (double dt)
             /* Field: x */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[0].name = "x";
             CMNode.Topics.Pub.RadarRSI.Msg.fields[0].offset = 0;
-            CMNode.Topics.Pub.RadarRSI.Msg.fields[0].datatype = 8;              /* double */
+            CMNode.Topics.Pub.RadarRSI.Msg.fields[0].datatype = 7;              /* float */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[0].count = 1;
 
             /* Field: y */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[1].name = "y";
-            CMNode.Topics.Pub.RadarRSI.Msg.fields[1].offset = 8;
-            CMNode.Topics.Pub.RadarRSI.Msg.fields[1].datatype = 8;              /* double */
+            CMNode.Topics.Pub.RadarRSI.Msg.fields[1].offset = 4;
+            CMNode.Topics.Pub.RadarRSI.Msg.fields[1].datatype = 7;              /* float */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[1].count = 1;
 
             /* Field: z */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[2].name = "z";
-            CMNode.Topics.Pub.RadarRSI.Msg.fields[2].offset = 16;
-            CMNode.Topics.Pub.RadarRSI.Msg.fields[2].datatype = 8;              /* double */
+            CMNode.Topics.Pub.RadarRSI.Msg.fields[2].offset = 8;
+            CMNode.Topics.Pub.RadarRSI.Msg.fields[2].datatype = 7;              /* float */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[2].count = 1;
 
             /* Field: velocity (m/s) */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[3].name = "velocity";
-            CMNode.Topics.Pub.RadarRSI.Msg.fields[3].offset = 24;
+            CMNode.Topics.Pub.RadarRSI.Msg.fields[3].offset = 12;
             CMNode.Topics.Pub.RadarRSI.Msg.fields[3].datatype = 8;              /* double */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[3].count = 1;
 
             /* Field: power (dBm) */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[4].name = "power";
-            CMNode.Topics.Pub.RadarRSI.Msg.fields[4].offset = 32;
+            CMNode.Topics.Pub.RadarRSI.Msg.fields[4].offset = 20;
             CMNode.Topics.Pub.RadarRSI.Msg.fields[4].datatype = 8;              /* double */
             CMNode.Topics.Pub.RadarRSI.Msg.fields[4].count = 1;
 
-            int point_step = 40;
+            point_step = 28;
+            row_step = point_step * RadarRSI[0].nDetections;
             CMNode.Topics.Pub.RadarRSI.Msg.is_bigendian = false;
             CMNode.Topics.Pub.RadarRSI.Msg.point_step = point_step;
-            CMNode.Topics.Pub.RadarRSI.Msg.row_step = point_step * RadarRSI[0].nDetections;
+            CMNode.Topics.Pub.RadarRSI.Msg.row_step = row_step;
             CMNode.Topics.Pub.RadarRSI.Msg.is_dense = true;
 
             /* Create the output data binary blob */
             double x_f, y_f, z_f;
             double distance, azimuth, elevation;
-            CMNode.Topics.Pub.RadarRSI.Msg.data.resize(CMNode.Topics.Pub.RadarRSI.Msg.row_step);
+            CMNode.Topics.Pub.RadarRSI.Msg.data.resize(row_step);
             ptr = CMNode.Topics.Pub.RadarRSI.Msg.data.data();
 
             for (int ii = 0; ii < RadarRSI[0].nDetections; ii++) {
                 switch(CMNode.Sensor.RadarRSI.OutputType) {
-                    case 1:
+                    case 0:
                         x_f = RadarRSI[0].DetPoints[ii].Coordinates[0];
                         y_f = RadarRSI[0].DetPoints[ii].Coordinates[1];
                         z_f = RadarRSI[0].DetPoints[ii].Coordinates[2];
                         break;
-                    case 2:
+                    case 1:
                         distance    = RadarRSI[0].DetPoints[ii].Coordinates[0];
                         azimuth     = RadarRSI[0].DetPoints[ii].Coordinates[1];
                         elevation   = RadarRSI[0].DetPoints[ii].Coordinates[2];     // note that this is elevation, NOT inclination
@@ -1269,14 +1273,15 @@ CMRosIF_CMNode_Calc (double dt)
                         y_f         = distance*cos(elevation)*sin(azimuth);
                         z_f         = distance*sin(elevation);                      // sin(elevation) == cos(inclination)
                         break;
-                    case 3:
+                    case 2:
                         LogErrF(EC_Sim, "CMNode: VRx RADAR RSI receivers not supported.");
                 }
-                *(reinterpret_cast<double*>(ptr +  0)) = x_f;
-                *(reinterpret_cast<double*>(ptr +  8)) = y_f;
-                *(reinterpret_cast<double*>(ptr + 16)) = z_f;
-                *(reinterpret_cast<double*>(ptr + 24)) = RadarRSI[0].DetPoints[ii].Velocity;
-                *(reinterpret_cast<double*>(ptr + 32)) = RadarRSI[0].DetPoints[ii].Power;
+                *(reinterpret_cast<float*>(ptr +   0)) = (float) x_f;
+                *(reinterpret_cast<float*>(ptr +   4)) = (float) y_f;
+                *(reinterpret_cast<float*>(ptr +   8)) = (float) z_f;
+                *(reinterpret_cast<double*>(ptr + 12)) = RadarRSI[0].DetPoints[ii].Velocity;
+                *(reinterpret_cast<double*>(ptr + 20)) = RadarRSI[0].DetPoints[ii].Power;
+
                 ptr += point_step;
             }
         }
@@ -1285,7 +1290,7 @@ CMRosIF_CMNode_Calc (double dt)
     /* Publish vehicle velocity data from CarMaker */
     if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.Velocity.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
         LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.Velocity.Job), CMCRJob_RVStr(rv));
-    } else {
+    } else if (rv == CMCRJob_RV_DoSomething) {
         CMNode.Topics.Pub.Velocity.Msg.header.frame_id = "Fr1";
         CMNode.Topics.Pub.Velocity.Msg.header.stamp = ros::Time(SimCore.Time);
 
@@ -1388,14 +1393,14 @@ CMRosIF_CMNode_Out (void)
 
             /* Publish message to output */
             out_lidar->Pub.publish(out_lidar->Msg);
-
-            /* Update the coordinate transformation between Fr1 and Fr_LidarRSI */
-            CMNode.Sensor.LidarRSI.TF.header.stamp = out_lidar->Msg.header.stamp;
-            CMNode.Global.TF_br->sendTransform(CMNode.Sensor.LidarRSI.TF);
+            CMNode.Topics.Pub.LidarRSI.Msg.data.clear();
 
             /* Remember cycle for debugging */
             CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
         }
+        /* Update the coordinate transformation between Fr1 and Fr_LidarRSI */
+        CMNode.Sensor.LidarRSI.TF.header.stamp = ros::Time(SimCore.Time);
+        CMNode.Global.TF_br->sendTransform(CMNode.Sensor.LidarRSI.TF);
     }
 
     /* Publish RADAR PointCloud2 messages */
@@ -1408,14 +1413,14 @@ CMRosIF_CMNode_Out (void)
 
             /* Publish message to output */
             out_radar->Pub.publish(out_radar->Msg);
-
-            /* Update the coordinate transformation between Fr1 and Fr_RadarRSI */
-            CMNode.Sensor.RadarRSI.TF.header.stamp = out_radar->Msg.header.stamp;
-            CMNode.Global.TF_br->sendTransform(CMNode.Sensor.RadarRSI.TF);
+            CMNode.Topics.Pub.RadarRSI.Msg.data.clear();
 
             /* Remember cycle for debugging */
             CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
         }
+        /* Update the coordinate transformation between Fr1 and Fr_RadarRSI */
+        CMNode.Sensor.RadarRSI.TF.header.stamp = ros::Time(SimCore.Time);
+        CMNode.Global.TF_br->sendTransform(CMNode.Sensor.RadarRSI.TF);
     }
 
     /* Publish vehicle velocity messages */
@@ -1428,23 +1433,23 @@ CMRosIF_CMNode_Out (void)
         /* Publish message to output */
         out_vel->Pub.publish(out_vel->Msg);
 
-        /* Update the coordinate transformation between Fr0 and Fr1 */
-        CMNode.Vhcl.TF.header.stamp = out_vel->Msg.header.stamp;
-        CMNode.Vhcl.TF.header.frame_id = "Fr0";
-        CMNode.Vhcl.TF.child_frame_id = "Fr1";
-        CMNode.Vhcl.TF.transform.translation.x = Car.Fr1.t_0[0];
-        CMNode.Vhcl.TF.transform.translation.y = Car.Fr1.t_0[1];
-        CMNode.Vhcl.TF.transform.translation.z = Car.Fr1.t_0[2];
-        q.setRPY(Car.Fr1.r_zyx[0], Car.Fr1.r_zyx[1], Car.Fr1.r_zyx[2]);
-        CMNode.Vhcl.TF.transform.rotation.x = q.x();
-        CMNode.Vhcl.TF.transform.rotation.y = q.y();
-        CMNode.Vhcl.TF.transform.rotation.z = q.z();
-        CMNode.Vhcl.TF.transform.rotation.w = q.w();
-        CMNode.Global.TF_br->sendTransform(CMNode.Vhcl.TF);
-
         /* Remember cycle for debugging */
         CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
     }
+
+    /* Update the coordinate transformation between Fr0 and Fr1 */
+    CMNode.Vhcl.TF.header.stamp = ros::Time(SimCore.Time);
+    CMNode.Vhcl.TF.header.frame_id = "Fr0";
+    CMNode.Vhcl.TF.child_frame_id = "Fr1";
+    CMNode.Vhcl.TF.transform.translation.x = Car.Fr1.t_0[0];
+    CMNode.Vhcl.TF.transform.translation.y = Car.Fr1.t_0[1];
+    CMNode.Vhcl.TF.transform.translation.z = Car.Fr1.t_0[2];
+    q.setRPY(Car.Fr1.r_zyx[0], Car.Fr1.r_zyx[1], Car.Fr1.r_zyx[2]);
+    CMNode.Vhcl.TF.transform.rotation.x = q.x();
+    CMNode.Vhcl.TF.transform.rotation.y = q.y();
+    CMNode.Vhcl.TF.transform.rotation.z = q.z();
+    CMNode.Vhcl.TF.transform.rotation.w = q.w();
+    CMNode.Global.TF_br->sendTransform(CMNode.Vhcl.TF);
 
 
     // auto out = &CMNode.Topics.Pub.CM2Ext;
