@@ -52,7 +52,7 @@ The archive constains the CarMaker installation files. Follow the installation i
 
 ### Aslan-CarMaker
 #### Project Directory Setup
-The Aslan-CarMaker link is a complete CarMaker 9.1 project. IPG highly recommends that you have a separate dedicated directory for CarMaker projects with speficif subdirectories for every major release of CarMaker. An example project structure in your Home directory would thus look like:
+The Aslan-CarMaker link is a complete CarMaker 9.1 project. IPG highly recommends that you have a separate dedicated directory for CarMaker projects with specific subdirectories for every major release of CarMaker. An example project structure in your Home directory would thus look like:
 
     Home
     └── CM_Projects     # Root of CarMaker projects
