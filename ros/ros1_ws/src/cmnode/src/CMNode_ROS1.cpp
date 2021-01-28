@@ -1,6 +1,6 @@
 /*!
 ******************************************************************************
-**  CarMaker - Version 9.0.1
+**  CarMaker - Version 9.1
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -10,28 +10,14 @@
 ******************************************************************************
 *
 * Description:
-* - Prototype/Proof of Concept
-* - Unsupported ROS Example with CarMaker
-* - Structure may change in future!
+* - CarMaker ROS node adapted to work with the Project ASLAN autonomous vehicle stack
+* - Structure inherited from basic CarMaker ROS node example in the IPG Client Area FAQ
 * - Change general parameters in Infofile for CMRosIF ("Data/Config/CMRosIFParameters")
-* - Basic communication with or without parameterizable synchronization
-*
-*
-* ToDo:
-* - C++!!!
-* - ROS naming/way/namespaces
-* - parameter: CarMaker read, ROS set by service?
-*   -> ROS parameter mechanism seems better solution!
-* - node/topic/... destruction to allow dynamic load/unload
-*   when TestRun starts instead of initialization at CarMaker startup
-* - New Param_Get() function to read parameters from Infofile
-* - ...
-*
+* - Basic communication without parameterizable synchronization
 */
 
 #include <stdio.h>
 #include <string.h>
-
 
 /* CarMaker
 * - include other headers e.g. to access to vehicle data
@@ -44,7 +30,6 @@
 #include "DataDict.h"
 #include "SimCore.h"
 #include "InfoUtils.h"
-
 #include "apo.h"
 #include "GuiCmd.h"
 
@@ -58,7 +43,6 @@
 #include "Vehicle/Sensor_LidarRSI.h"
 #include "Vehicle/Sensor_Inertial.h"
 #include "Vehicle/Sensor_GNav.h"
-
 
 /* ROS CM */
 #include "cmrosutils/CMRosUtils.h"      /* Node independent templates, ...*/
@@ -106,29 +90,12 @@ typedef enum tCMNode_Mode {
 } tCMNode_Mode;
 
 
-
-/* Managing synchronization between CarMaker Node and other ROS nodes */
-typedef enum tCMNode_SyncMode {
-    CMNode_SyncMode_Disabled  = 0, /*!< No synchronization on CarMaker side */
-    CMNode_SyncMode_Tpc       = 1  /*!< Buffer messages or Spin until external Topics are received */
-} tCMNode_SyncMode;
-
-
-
 /* Global struct for this Node */
 static struct {
-    unsigned long  CycleNoRel;  /*!< CarMaker relative cycle number, e.g. since start of TestRun */
+    unsigned long       CycleNoRel;     /*!< CarMaker relative cycle number, e.g. since start of TestRun */
 
     struct {
-        double          Duration;      /*!< Time spent for synchronization task */
-        int             nCycles;       /*!< Number of cycles in synchronization loop */
-        int             CyclePrepDone; /*!< Last cycle when preparation was done */
-        int             CycleJobDone;  /*!< Last cycle when job was done */
-        double          SynthDelay;    /*!< Synthetic delay in seconds provided to external node to check sync */
-    } Sync; /*!< Synchronization related information */
-
-    struct {
-        int             CycleNo;      /*!< Cycle number of external ROS Node (only for information) */
+        int             CycleNo;        /*!< Cycle number of external ROS Node (only for information) */
 
         /* For debugging */
         int             CycleLastOut;   /*!< Cycle number when Topic was published */
@@ -147,7 +114,6 @@ static struct {
             tRosIF_TpcPub<sensor_msgs::PointCloud2> RadarRSI;
             tRosIF_TpcPub<geometry_msgs::TwistStamped> Velocity;
 
-
             /*!< CarMaker can be working as ROS Time Server providing simulation time
             *   starting at 0 for each TestRun */
             tRosIF_TpcPub<rosgraph_msgs::Clock> Clock;
@@ -155,8 +121,6 @@ static struct {
     } Topics; /*!< ROS Topics used by this Node */
 
     struct {
-        /*!< Initialization/Preparation of external ROS Node e.g. when simulation starts */
-
     } Services; /*!< ROS Services used by this Node (client and server)*/
 
     struct {
@@ -165,8 +129,6 @@ static struct {
         int                 nCyclesClock;       /*!< Number of cycles publishing /clock topic.
         CycleTime should be multiple of this value */
         tCMNode_Mode        Mode;
-        tCMNode_SyncMode    SyncMode;
-        double              SyncTimeMax;        /* Maximum Synchronization time */
 
         tRosIF_Cfg          Ros;
     } Cfg; /*!< General configuration for this Node */
@@ -209,16 +171,15 @@ static struct {
             double*         rot;                    /*!< Mounting rotation on vehicle frame */
             int             UpdRate;
             int             nCycleOffset;
-            int             OutputType;             /*!< 1:Cartesian 2:Spherical 3:VRx */
+            int             OutputType;             /*!< 0:Cartesian 1:Spherical 2:VRx */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } RadarRSI;
     } Sensor; /*!< Sensor parameters */
 
     struct {
-        tf2_ros::TransformBroadcaster *TF_br;        /*!< ROS transform broadcaster */
+        tf2_ros::TransformBroadcaster *TF_br;       /*!< ROS transform broadcaster */
         geometry_msgs::TransformStamped TF;         /*!< ROS Reference frame */
     } Global; /*!< Global simulation properties */
-
 
 } CMNode;
 
@@ -226,11 +187,10 @@ static struct {
 
 /*!
 * Description:
-* - Callback for ROS Topic published by external ROS Nodes
-*
+* - Callback for ROS Topics published by external ROS Nodes
 */
 
-//Subscriber Callback for SDControl from ASLAN
+/* Subscriber Callback for SDControl from ASLAN */
 static void
 cmnode_SDControl_CB_TpcIn(const aslan_msgs::SDControl::ConstPtr &msg) {
 
@@ -242,7 +202,6 @@ cmnode_SDControl_CB_TpcIn(const aslan_msgs::SDControl::ConstPtr &msg) {
     /* Remember cycle for debugging */
     CMNode.Model.CycleLastIn = CMNode.CycleNoRel;
 }
-
 
 
 /*!
@@ -319,9 +278,6 @@ extern "C" {
     * - Inf        = Handle to CarMaker Infofile with parameters for this interface
     *                - Please note that pointer may change, e.g. before TestRun begins
     *
-    * ToDo:
-    * - Possible to create/initialize node/... before each TestRun start instead of CM startup?
-    * - New Param_Get() function to read parameters from Infofile
     */
     int
     CMRosIF_CMNode_Init (int Argc, char **Argv, char *CMNodeName, struct tInfos *Inf)
@@ -385,10 +341,6 @@ extern "C" {
             LOG("    -> Publish '%s' every %dms", sbuf, CMNode.Cfg.nCyclesClock);
             CMNode.Topics.Pub.Clock.Pub  = node->advertise<rosgraph_msgs::Clock>(sbuf, CMNode.Cfg.QueuePub);
 
-
-            /* ToDo: Necessary/Possible to ensure /clock is zeroed? */
-            CMNode.Topics.Pub.Clock.Msg.clock = ros::Time(0.0);
-            CMNode.Topics.Pub.Clock.Pub.publish(CMNode.Topics.Pub.Clock.Msg);
         } else {
             LOG("  -> Don't provide simulation time!");
             CMNode.Cfg.nCyclesClock  = 0;
@@ -595,16 +547,9 @@ extern "C" {
         tDDefault *df = DDefaultCreate("CMRosIF.");
 
         DDefULong   (df, "CycleNoRel",         "ms", &CMNode.CycleNoRel,               DVA_None);
-        DDefInt     (df, "Sync.Cycles",        "-",  &CMNode.Sync.nCycles,             DVA_None);
-        DDefDouble  (df, "Sync.Time",          "s",  &CMNode.Sync.Duration,            DVA_None);
-        DDefInt     (df, "Sync.CyclePrepDone", "-",  &CMNode.Sync.CyclePrepDone,       DVA_None);
-        DDefInt     (df, "Sync.CycleJobDone" , "-",  &CMNode.Sync.CycleJobDone,        DVA_None);
-        DDefDouble4 (df, "Sync.SynthDelay",     "s", &CMNode.Sync.SynthDelay,          DVA_IO_In);
 
         DDefUChar   (df, "Cfg.Mode",           "-",  (unsigned char*)&CMNode.Cfg.Mode, DVA_None);
         DDefInt     (df, "Cfg.nCyclesClock",   "ms", &CMNode.Cfg.nCyclesClock,         DVA_None);
-        DDefChar    (df, "Cfg.SyncMode",       "-",  (char*)&CMNode.Cfg.SyncMode,      DVA_None);
-        DDefDouble4 (df, "Cfg.SyncTimeMax",    "s",  &CMNode.Cfg.SyncTimeMax,          DVA_IO_In);
 
         DDefInt     (df, "Mdl.CycleNo",        "-",  &CMNode.Model.CycleNo,            DVA_None);
         DDefInt     (df, "Mdl.CycleLastOut",   "ms", &CMNode.Model.CycleLastOut,       DVA_None);
@@ -633,9 +578,6 @@ extern "C" {
     * - Inf = CarMaker Infofile for CMRosIF with content after TestRun start
     *         - Please note that the Infofile provided at initialization might have been updated!
     *
-    * ToDo:
-    * - New Param_Get() function to read parameters from Infofile
-    *
     */
     int
     CMRosIF_CMNode_TestRun_Start_atBegin (struct tInfos *Inf)
@@ -643,11 +585,9 @@ extern "C" {
 
         /* Node can be disabled via Infofile */
         tCMNode_Mode     *pmode     = &CMNode.Cfg.Mode;
-        tCMNode_SyncMode *psyncmode = &CMNode.Cfg.SyncMode;
 
         if (Inf != NULL) {
             *pmode     =     (tCMNode_Mode)iGetIntOpt(Inf, "Node.Mode",      CMNode_Mode_Disabled);
-            *psyncmode = (tCMNode_SyncMode)iGetIntOpt(Inf, "Node.Sync.Mode", CMNode_SyncMode_Disabled);
         }
 
         if (SimCore.CycleNo == 0 || Inf == NULL || *pmode == CMNode_Mode_Disabled) {
@@ -660,10 +600,8 @@ extern "C" {
         char key[256];
         char *str               = NULL;
         int rv                  = 0;
-        bool rvb                = false;
 
         int cycletime           = 0;
-        int *pcycletime         = NULL;
         int cycleoff            = 0;
         tCMCRJob *job           = NULL;
 
@@ -771,7 +709,7 @@ extern "C" {
 
         CMNode.Sensor.GNav.Active  = iGetIntOpt(Inf_Env, "Env.GNav.Active", 0);
 
-        LOG("CarMaker ROS Node is enabled! Mode=%d, SyncMode=%d", *pmode, *psyncmode);
+        LOG("CarMaker ROS Node is enabled! Mode=%d", *pmode);
         LOG("  -> Node Name = %s", ros::this_node::getName().c_str());
 
         /* Close all Infofile handles */
@@ -779,22 +717,8 @@ extern "C" {
         InfoDelete(Inf_Env);
         InfoDelete(Inf_Lidar);
 
-        /* Update synchronization */
-        if (*psyncmode != CMNode_SyncMode_Disabled && *psyncmode != CMNode_SyncMode_Tpc) {
-            LogErrF(EC_Sim, "CMNode: Invalid synchronization mode '%d'!",*psyncmode);
-            *pmode = CMNode_Mode_Disabled;
-            return -1;
-        }
-
-        CMNode.Cfg.SyncTimeMax = iGetDblOpt(Inf, "Node.Sync.TimeMax", 1.0);
-
-
         /* Reset for next cycle */
         CMNode.CycleNoRel           =  0;
-        CMNode.Sync.Duration        =  0.0;
-        CMNode.Sync.nCycles         = -1;
-        CMNode.Sync.CycleJobDone    = -1;
-        CMNode.Sync.CyclePrepDone   = -1;
         CMNode.Model.CycleNo        = -1;
         CMNode.Model.CycleLastIn    = -1;
         CMNode.Model.CycleLastOut   = -1;
@@ -807,804 +731,568 @@ extern "C" {
             CMNode.Cfg.nCyclesClock = rv;
         }
 
-        /* Necessary to ensure /clock is zeroed here?
-        * ToDo: Create function? */
+        /* Necessary to ensure /clock is zeroed here? */
         if (CMNode.Cfg.nCyclesClock > 0) {
             LOG("  -> Publish /clock every %dms", CMNode.Cfg.nCyclesClock);
             CMNode.Topics.Pub.Clock.Msg.clock = ros::Time(0.0);
             CMNode.Topics.Pub.Clock.Pub.publish(CMNode.Topics.Pub.Clock.Msg);
         }
 
+        /* Prepare Jobs for publish and subscribe
+        * - Special use case:
+        *   - Topic in and Topic out use same cycle time with relative shift!
+        */
 
-        /* Prepare external node for next simulation */
-        /* if (!srv->Clnt.exists()) {
-        // ToDo: possible to get update if external ROS Node name changes?
-        LogErrF(EC_Sim, "ROS Service is not ready! Please start external ROS Node providing Service '%s'!",
-        srv->Clnt.getService().c_str());
-        *pmode = CMNode_Mode_Disabled;
-        return -1;
-    }
-    */
+        /* SDControl sub job */
+        job         = CMNode.Topics.Sub.SDC.Job;
+        cycletime   = CMNode.Topics.Sub.SDC.CycleTime;
+        cycleoff    = CMNode.Topics.Sub.SDC.CycleOffset;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
 
-    LOG("  -> Send Service Request");
+        /* GPS pub job */
+        job         = CMNode.Topics.Pub.GPS.Job;
+        cycletime   = CMNode.Sensor.GNav.UpdRate;
+        cycleoff    = CMNode.Sensor.GNav.nCycleOffset;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
-    /* ToDo: Async?*/
-    /* if (!srv->Clnt.call(srv->Msg)) {
-    LogErrF(EC_Sim, "ROS Service error!");
-    *pmode = CMNode_Mode_Disabled;
-    return -1;
-}
-*/
+        /* LiDAR RSI pub job */
+        job         = CMNode.Topics.Pub.LidarRSI.Job;
+        cycletime   = CMNode.Sensor.LidarRSI.UpdRate;
+        cycleoff    = CMNode.Sensor.LidarRSI.nCycleOffset;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
-/* Update cycle time with information of external node */
+        /* RADAR RSI pub job */
+        job         = CMNode.Topics.Pub.RadarRSI.Job;
+        cycletime   = CMNode.Sensor.RadarRSI.UpdRate;
+        cycleoff    = CMNode.Sensor.RadarRSI.nCycleOffset;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
-// #if 1
-/* Variant 1:
-* - Receiving parameters via ROS Parameter Server
-* - Parameter may be set externally e.g. by other node or arguments to command
-* - ROS parameters are more flexible than ROS services!
-*/
-/*     strcpy(sbuf, hellocm::prm_cycletime_name.c_str());
-if ((rv = CMNode.Cfg.Ros.Node->hasParam(sbuf)) == true)
-CMNode.Cfg.Ros.Node->getParam(sbuf, rv);
-*/
-// #else
-/* Variant 2:
-* - Receiving parameters from external Node via Service
-* - Services might be too "static"
-* - Not recommended!
-*/
-/*     rv = srv->Msg.response.cycletime;
-#endif
-
-pcycletime = &CMNode.Topics.Sub.Ext2CM.CycleTime;
-
-if (*pcycletime != rv) {
-LOG("  -> Cycle time of external node changed from %dms to %dms", *pcycletime, rv);
-*pcycletime = rv;
-}
-*/
-
-/* Plausibility check for Cycle Time */
-/*     if (CMNode.Cfg.nCyclesClock > 0 && (*pcycletime < CMNode.Cfg.nCyclesClock
-|| *pcycletime%CMNode.Cfg.nCyclesClock != 0)) {
-
-LogErrF(EC_Sim, "Ext. ROS Node has invalid cycle time! Expected multiple of %dms but got %dms",
-CMNode.Cfg.nCyclesClock, *pcycletime);
-
-*pmode = CMNode_Mode_Disabled;
-return -1;
-}
-*/
+        /* Vehicle Velocity pub job */
+        job         = CMNode.Topics.Pub.Velocity.Job;
+        cycletime   = CMNode.Topics.Pub.Velocity.CycleTime;
+        cycleoff    = CMNode.Topics.Pub.Velocity.CycleOffset;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
 
+        LOG("External ROS Node is ready to simulate");
 
-/* Prepare Jobs for publish and subscribe
-* - Special use case:
-*   - Topic in and Topic out use same cycle time with relative shift!
-*/
-
-/* SDControl sub job */
-job         = CMNode.Topics.Sub.SDC.Job;
-cycletime   = CMNode.Topics.Sub.SDC.CycleTime;
-cycleoff    = CMNode.Topics.Sub.SDC.CycleOffset;
-CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
-
-/* GPS pub job */
-job         = CMNode.Topics.Pub.GPS.Job;
-cycletime   = CMNode.Sensor.GNav.UpdRate;
-cycleoff    = CMNode.Sensor.GNav.nCycleOffset;
-CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
-
-/* LiDAR RSI pub job */
-job         = CMNode.Topics.Pub.LidarRSI.Job;
-cycletime   = CMNode.Sensor.LidarRSI.UpdRate;
-cycleoff    = CMNode.Sensor.LidarRSI.nCycleOffset;
-CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
-
-/* RADAR RSI pub job */
-job         = CMNode.Topics.Pub.RadarRSI.Job;
-cycletime   = CMNode.Sensor.RadarRSI.UpdRate;
-cycleoff    = CMNode.Sensor.RadarRSI.nCycleOffset;
-CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
-
-/* Vehicle Velocity pub job */
-job         = CMNode.Topics.Pub.Velocity.Job;
-cycletime   = CMNode.Topics.Pub.Velocity.CycleTime;
-cycleoff    = CMNode.Topics.Pub.Velocity.CycleOffset;
-CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
-
-/* Synchronization with external node
-* - external node provides cycle time (see service above)
-* - other parameterization methods (e.g. ROS parameter, ...) are possible!
-* - Expect sync Topic are delayed (communication time, ...)
-* - This example shows sync via ROS Timer in external node
-*   - Therefore "/clock" topic needs to be published by CarMaker!
-*   - Other mechanism, e.g. data triggered on external node side
-*     via publishing Topic directly inside subscription callback is also possible!
-* - time=0.0 can't be detected by external node, therefore
-*   first receive needs to start after expected cycle time
-*   of external ROS node
-*/
-
-
-/* Create the synchronization jobs */
-// if (*psyncmode == CMNode_SyncMode_Tpc) {
-//     CMCRJob_Init(job, cycletime+1 , cycletime, CMCRJob_Mode_Ext);
-//
-//     LOG("  -> Synchronize on Topic '%s' (cycletime=%d, cycleoff=%d)",
-//     CMNode.Topics.Sub.SDC.Sub.getTopic().c_str(), cycletime, cycleoff);
-//
-// } else
-// CMCRJob_Init(job, cycletime+1 , cycletime, CMCRJob_Mode_Default);
-
-
-
-LOG("External ROS Node is ready to simulate");
-
-return 1;
-}
-
-
-
-/*!
-* ToDo:
-* - Put everything to TestRun_Start_atBegin?
-*
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Repeating call for several CarMaker cycles until return value is 1
-* - May be called even previous return value was 1
-* - See "User.c:User_TestRun_RampUp()"
-*
-*/
-int
-CMRosIF_CMNode_TestRun_RampUp (void)
-{
-
-    /* Return immediately if node is disabled */
-    if (CMNode.Cfg.Mode == CMNode_Mode_Disabled) {
         return 1;
     }
 
-    /* Put your code here */
-    //if (NotReady) return 0;
 
 
-    return 1;
-}
+    /*!
+    *
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Repeating call for several CarMaker cycles until return value is 1
+    * - May be called even previous return value was 1
+    * - See "User.c:User_TestRun_RampUp()"
+    *
+    */
+    int
+    CMRosIF_CMNode_TestRun_RampUp (void)
+    {
+        /* Return immediately if node is disabled */
+        if (CMNode.Cfg.Mode == CMNode_Mode_Disabled) {
+            return 1;
+        }
 
+        /* Put your code here */
 
-
-/*!
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Called when TestRun ends (no realtime conditions)
-* - See "User.c:User_TestRun_End()"
-*
-*/
-int
-CMRosIF_CMNode_TestRun_End (void)
-{
-
-
-    /* Put your code here */
-
-    /* Disable after simulation has finished */
-    CMNode.Cfg.Mode = CMNode_Mode_Disabled;
-
-    return 1;
-}
+        return 1;
+    }
 
 
 
-/*!
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Called at very beginning of CarMaker cycle
-* - Process all topics/services using different modes or synchronization modes
-* - See "User.c:User_In()"
-*
-* ToDo:
-* - Additional spin mechanism
-*   - e.g. for HIL
-*   - e.g. spinning in new thread, copying incoming data here, ...
-*
-*/
-int
-CMRosIF_CMNode_In (void)
-{
+    /*!
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Called when TestRun ends (no realtime conditions)
+    * - See "User.c:User_TestRun_End()"
+    *
+    */
+    int
+    CMRosIF_CMNode_TestRun_End (void)
+    {
 
-    int rv                   = 0;
-    int rx_done              = 0;
-    const char *job_name     = NULL;
-    tCMCRJob *job            = NULL;
-    ros::WallTime tStart     = ros::WallTime::now();
-    ros::WallDuration tDelta = ros::WallDuration(0.0);
-    CMNode.Sync.nCycles      = 0;
-    CMNode.Sync.Duration     = 0.0;
 
-    switch (CMNode.Cfg.Mode) {
-        case CMNode_Mode_Disabled:
-        /* Comment next line if no messages/services
-        * shall be processed in disabled Node state
-        */
-        ros::spinOnce();
-        break;
+        /* Put your code here */
 
-        case CMNode_Mode_Default:
+        /* Disable after simulation has finished */
+        CMNode.Cfg.Mode = CMNode_Mode_Disabled;
 
-        if (CMNode.Cfg.SyncMode != CMNode_SyncMode_Tpc) {
-            /* Process messages in queue, but do not block */
-            ros::spinOnce();
+        return 1;
+    }
 
-        } else {
-            /* Synchronization based on expected Topics
-            * - Blocking call (process publish and wait for answer)
-            * - Stop simulation if maximum time is exceeded
-            */
-            do {
-                ros::spinOnce();
 
-                /* Only do anything if simulation is running */
-                if (SimCore.State != SCState_Simulate) {
-                    rx_done = 1;
-                    break;
-                }
 
-                rx_done = 0;
-
-                /* Check all jobs if preparation is done */
-                job      = CMNode.Topics.Sub.SDC.Job;
-
-                if ((rv = CMCRJob_DoPrep(job, CMNode.CycleNoRel, 0, NULL, NULL)) < CMCRJob_RV_OK) {
-                    LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s",CMCRJob_GetName(job), CMCRJob_RVStr(rv));
-                    rx_done = 0;
-                    break;
-                }
-
-                /* If job is not done, remember name and prevent loop to finish */
-                job_name = (rv != CMCRJob_RV_DoSomething ? NULL : CMCRJob_GetName(job));
-                rx_done  = rv == CMCRJob_RV_DoNothing ? 1 : 0;
-
-                if (rx_done == 1)
+    /*!
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Called at very beginning of CarMaker cycle
+    * - Process all topics/services
+    * - See "User.c:User_In()"
+    *
+    */
+    int
+    CMRosIF_CMNode_In (void)
+    {
+        /* Is the CMNode enabled */
+        switch (CMNode.Cfg.Mode) {
+            case CMNode_Mode_Disabled:
+                /* No messages/services shall be processed in disabled state */
                 break;
 
-                /* Wait a little that data can arrive. WallTime, NOT ROS time!!!*/
-                ros::WallDuration(0.0).sleep();
-                tDelta = ros::WallTime::now() - tStart;
-                CMNode.Sync.nCycles++;
+            case CMNode_Mode_Default:
+                ros::spinOnce();
+                break;
 
-            } while (ros::ok() && rx_done == 0 && tDelta.toSec() < CMNode.Cfg.SyncTimeMax);
+            case CMNode_Mode_Threaded:
+                /* ToDo
+                * - Spinning in parallel thread started before
+                * - Lock variables!
+                * - e.g. for HIL
+                */
+                break;
 
-            /* Final calculation to get duration including last cycle before receive */
-            tDelta = ros::WallTime::now() - tStart;
+            default:
+                /* Invalid!!! */;
+        }
+        return 1;
+    }
 
-            CMNode.Sync.Duration = tDelta.toSec();
 
-            if (rx_done != 1 && CMNode.Cfg.SyncTimeMax > 0.0 && tDelta.toSec() >= CMNode.Cfg.SyncTimeMax)
-            LogErrF(EC_Sim, "CMNode: Synchronization error! tDelta=%.3f, Last invalid Job='%s'\n", tDelta.toSec(), job_name);
+
+    /*!
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Called after driving maneuver calculation
+    * - before CMRosIF_CMNode_VehicleControl_Calc()
+    * - See "User.c:User_DrivManCalc()"
+    */
+    int
+    CMRosIF_CMNode_DrivMan_Calc (double dt)
+    {
+        /* Only do anything if simulation is running */
+        if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
+            return 0;
         }
 
-        break;
+        /* Put your code here */
 
-        case CMNode_Mode_Threaded:
-        /* ToDo
-        * - Spinning in parallel thread started before
-        * - Lock variables!
-        * - e.g. for HIL
-        */
-        break;
-
-        default:
-        /* Invalid!!! */;
+        return 1;
     }
 
-    return 1;
-}
 
 
-
-/*!
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Called after driving maneuver calculation
-* - before CMRosIF_CMNode_VehicleControl_Calc()
-* - See "User.c:User_DrivManCalc()"
-*/
-int
-CMRosIF_CMNode_DrivMan_Calc (double dt)
-{
-    /* Only do anything if simulation is running */
-    if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
-        return 0;
-    }
-
-    /* Put your code here */
-
-    return 1;
-}
-
-
-
-/*!
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Called after CMRosIF_CMNode_DrivManCalc
-* - before CMRosIF_CMNode_VehicleControl_Calc()
-* - See "User.c:User_VehicleControl_Calc()"
-*/
-int
-CMRosIF_CMNode_VehicleControl_Calc (double dt)
-{
-    /* Only do anything if simulation is running */
-    if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
-        return 0;
-    }
-
-    int rv;
-    auto sub = &CMNode.Topics.Sub.SDC;
-    double steer_ang, trq_demand;   /* Intermediate values from SDControl */
-    double gas, brake;              /* VehicleControl pedal values */
-
-    if ((rv = CMCRJob_DoJob(sub->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing
-    && rv != CMCRJob_RV_DoSomething) {
-        LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s", CMCRJob_GetName(sub->Job), CMCRJob_RVStr(rv));
-    } else if (rv == CMCRJob_RV_DoSomething) {
-        /* Translate torque demand to pedal positions */
-        trq_demand = CMNode.Topics.Sub.SDC.Msg.torque/100.0;
-
-        if (trq_demand >= 0) {
-            gas = trq_demand;
-            brake = 0.0;
-        } else {
-            gas = 0.0;
-            brake = -trq_demand;
+    /*!
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Called after CMRosIF_CMNode_DrivManCalc
+    * - before CMRosIF_CMNode_VehicleControl_Calc()
+    * - See "User.c:User_VehicleControl_Calc()"
+    */
+    int
+    CMRosIF_CMNode_VehicleControl_Calc (double dt)
+    {
+        /* Only do anything if simulation is running */
+        if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
+            return 0;
         }
 
-        /* Calculate the steering angle from the current steering input */
-        steer_ang = CMNode.Topics.Sub.SDC.Msg.steer/100.0*CMNode.Vhcl.MaxSteerAng;
+        int rv;
+        auto sub = &CMNode.Topics.Sub.SDC;
+        double steer_ang, trq_demand;   /* Intermediate values from SDControl */
+        double gas, brake;              /* VehicleControl pedal values */
 
-        VehicleControl.Gas              = gas;
-        VehicleControl.Brake            = brake;
-        VehicleControl.Steering.Ang     = steer_ang;
-
-        /* Remember cycle for debugging */
-        CMNode.Sync.CycleJobDone    = CMNode.CycleNoRel;
-        CMNode.Model.CycleLastFlush = CMNode.CycleNoRel;
-
-    }
-
-    /* Put your code here */
-    return 1;
-}
-
-
-
-/*!
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Called after vehicle model has been calculated
-* - See "User.c:User_Calc()"
-*/
-int
-CMRosIF_CMNode_Calc (double dt)
-{
-    int rv;
-    uint8_t *ptr;
-    int point_step, row_step;
-
-    /* 3D Coordinate system points */
-    double x, y, z;
-    double distance, azimuth, elevation;
-
-    /* LiDAR parameter references for convenience */
-    double *Lbeams  = CMNode.Sensor.LidarRSI.Beams;
-    int N           = CMNode.Sensor.LidarRSI.nBeams;
-
-    /* Only do anything if simulation is running */
-    if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
-        return 0;
-    }
-
-    /* Publish GPS data from CarMaker */
-    if (CMNode.Sensor.GNav.Active) {
-        if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.GPS.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
-            LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.GPS.Job), CMCRJob_RVStr(rv));
+        if ((rv = CMCRJob_DoJob(sub->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing
+        && rv != CMCRJob_RV_DoSomething) {
+            LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s", CMCRJob_GetName(sub->Job), CMCRJob_RVStr(rv));
         } else if (rv == CMCRJob_RV_DoSomething) {
-            CMNode.Topics.Pub.GPS.Msg.header.frame_id = "Fr0";
-            CMNode.Topics.Pub.GPS.Msg.header.stamp = ros::Time(SimCore.Time);
+            /* Translate torque demand to pedal positions */
+            trq_demand = CMNode.Topics.Sub.SDC.Msg.torque/100.0;
 
-            CMNode.Topics.Pub.GPS.Msg.status.status = 0;    /* Augmentation fix not available in CarMaker */
-            CMNode.Topics.Pub.GPS.Msg.status.service = 1;   /* CarMaker simulates GPS only */
-
-            /* Exact receiver position, could be replaced by Pseudorange if errors are to be simulated */
-            CMNode.Topics.Pub.GPS.Msg.latitude = GNavSensor.Receiver.UserPosLlhTsa[0];
-            CMNode.Topics.Pub.GPS.Msg.longitude = GNavSensor.Receiver.UserPosLlhTsa[1];
-            CMNode.Topics.Pub.GPS.Msg.altitude = GNavSensor.Receiver.UserPosLlhTsa[2];
-
-            /* Use ideal covariance matrix with the exact receiver position */
-            int ideal_cov[] = {1,0,0,0,1,0,0,0,1};
-            for (int i = 0; i < 9; i++) {
-                CMNode.Topics.Pub.GPS.Msg.position_covariance[i] = ideal_cov[i];
+            if (trq_demand >= 0) {
+                gas = trq_demand;
+                brake = 0.0;
+            } else {
+                gas = 0.0;
+                brake = -trq_demand;
             }
-            CMNode.Topics.Pub.GPS.Msg.position_covariance_type = 2; /* Assume this is a covariance matrix of known diagonal */
+
+            /* Calculate the steering angle from the current steering input */
+            steer_ang = CMNode.Topics.Sub.SDC.Msg.steer/100.0*CMNode.Vhcl.MaxSteerAng;
+
+            VehicleControl.Gas              = gas;
+            VehicleControl.Brake            = brake;
+            VehicleControl.Steering.Ang     = steer_ang;
+
+            /* Remember cycle for debugging */
+            CMNode.Model.CycleLastFlush = CMNode.CycleNoRel;
         }
+        return 1;
     }
 
-    /* Publish LiDAR RSI data from CarMaker */
-    if (CMNode.Sensor.LidarRSI.N > 0) {
-        if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.LidarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
-            LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.LidarRSI.Job), CMCRJob_RVStr(rv));
-        } else if (rv == CMCRJob_RV_DoSomething) {
 
-            /* Frame header timestamp */
-            CMNode.Topics.Pub.LidarRSI.Msg.header.stamp = ros::Time(LidarRSI[0].ScanTime);
 
-            /* Unordered cloud with the number of scanned points of the LiDAR */
-            CMNode.Topics.Pub.LidarRSI.Msg.width = LidarRSI[0].nScanPoints;
+    /*!
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Called after vehicle model has been calculated
+    * - See "User.c:User_Calc()"
+    */
+    int
+    CMRosIF_CMNode_Calc (double dt)
+    {
+        int rv;
+        uint8_t *ptr;
+        int point_step, row_step;
 
-            // LiDAR messages contain 56 bytes
-            point_step = 56;
-            row_step = point_step * LidarRSI[0].nScanPoints;
-            CMNode.Topics.Pub.LidarRSI.Msg.point_step = point_step;
-            CMNode.Topics.Pub.LidarRSI.Msg.row_step = row_step;
+        /* 3D Coordinate system points */
+        double x, y, z;
+        double distance, azimuth, elevation;
 
-            /* Create the output data binary blob */
-            CMNode.Topics.Pub.LidarRSI.Msg.data.resize(row_step);
-            ptr = CMNode.Topics.Pub.LidarRSI.Msg.data.data();
+        /* LiDAR parameter references for convenience */
+        double *Lbeams  = CMNode.Sensor.LidarRSI.Beams;
+        int N           = CMNode.Sensor.LidarRSI.nBeams;
 
-            for (int ii = 0; ii < LidarRSI[0].nScanPoints; ii++) {
-                /* Extract the beam spherical and convert to Cartesian coordinates */
-                distance    = LidarRSI[0].ScanPoint[ii].LengthOF/2;                             // Flight length is double the distance
-                azimuth     = DEG_to_RAD * Lbeams[4*N + LidarRSI[0].ScanPoint[ii].BeamID];      // BeamID is the table row, and Azimuth is column 5
-                elevation   = DEG_to_RAD * Lbeams[5*N + LidarRSI[0].ScanPoint[ii].BeamID];      // BeamID is the table row, and Elevation is column 6
-                x           = distance*cos(elevation)*cos(azimuth);
-                y           = distance*cos(elevation)*sin(azimuth);
-                z           = distance*sin(elevation);                                          // sin(elevation) == cos(inclination)
-
-                *(reinterpret_cast<uint32_t*>(ptr +  0)) = LidarRSI[0].ScanPoint[ii].BeamID;
-                *(reinterpret_cast<uint32_t*>(ptr +  4)) = LidarRSI[0].ScanPoint[ii].EchoID;
-                *(reinterpret_cast<double*>(ptr +  8)) = LidarRSI[0].ScanPoint[ii].TimeOF;
-                *(reinterpret_cast<double*>(ptr + 16)) = LidarRSI[0].ScanPoint[ii].LengthOF;
-                *(reinterpret_cast<float*>(ptr + 24)) = (float) x;
-                *(reinterpret_cast<float*>(ptr + 28)) = (float) y;
-                *(reinterpret_cast<float*>(ptr + 32)) = (float) z;
-                *(reinterpret_cast<double*>(ptr + 36)) = LidarRSI[0].ScanPoint[ii].Intensity;
-                *(reinterpret_cast<double*>(ptr + 44)) = LidarRSI[0].ScanPoint[ii].PulseWidth;
-                *(reinterpret_cast<uint32_t*>(ptr + 52)) = LidarRSI[0].ScanPoint[ii].nRefl;
-                ptr += point_step;
-            }
+        /* Only do anything if simulation is running */
+        if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
+            return 0;
         }
-    }
 
-    /* Publish RADAR RSI data from CarMaker */
-    if (CMNode.Sensor.RadarRSI.N > 0) {
-        if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.RadarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
-            LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.RadarRSI.Job), CMCRJob_RVStr(rv));
-        } else if (rv == CMCRJob_RV_DoSomething) {
+        /* Publish GPS data from CarMaker */
+        if (CMNode.Sensor.GNav.Active) {
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.GPS.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.GPS.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+                CMNode.Topics.Pub.GPS.Msg.header.frame_id = "Fr0";
+                CMNode.Topics.Pub.GPS.Msg.header.stamp = ros::Time(SimCore.Time);
 
-            /* Frame header timestamp*/
-            CMNode.Topics.Pub.RadarRSI.Msg.header.stamp = ros::Time(RadarRSI[0].TimeFired);
+                CMNode.Topics.Pub.GPS.Msg.status.status = 0;    /* Augmentation fix not available in CarMaker */
+                CMNode.Topics.Pub.GPS.Msg.status.service = 1;   /* CarMaker simulates GPS only */
 
-            /* Unordered cloud with the number of scanned points of the RADAR */
-            CMNode.Topics.Pub.RadarRSI.Msg.width = RadarRSI[0].nDetections;
+                /* Exact receiver position, could be replaced by Pseudorange if errors are to be simulated */
+                CMNode.Topics.Pub.GPS.Msg.latitude = GNavSensor.Receiver.UserPosLlhTsa[0];
+                CMNode.Topics.Pub.GPS.Msg.longitude = GNavSensor.Receiver.UserPosLlhTsa[1];
+                CMNode.Topics.Pub.GPS.Msg.altitude = GNavSensor.Receiver.UserPosLlhTsa[2];
 
-            // RADAR messages contain 28 bytes
-            point_step = 28;
-            row_step = point_step * RadarRSI[0].nDetections;
-            CMNode.Topics.Pub.RadarRSI.Msg.point_step = point_step;
-            CMNode.Topics.Pub.RadarRSI.Msg.row_step = row_step;
-
-            /* Create the output data binary blob */
-            CMNode.Topics.Pub.RadarRSI.Msg.data.resize(row_step);
-            ptr = CMNode.Topics.Pub.RadarRSI.Msg.data.data();
-
-            for (int ii = 0; ii < RadarRSI[0].nDetections; ii++) {
-                switch(CMNode.Sensor.RadarRSI.OutputType) {
-                    case 0:
-                        x           = RadarRSI[0].DetPoints[ii].Coordinates[0];
-                        y           = RadarRSI[0].DetPoints[ii].Coordinates[1];
-                        z           = RadarRSI[0].DetPoints[ii].Coordinates[2];
-                        break;
-                    case 1:
-                        distance    = RadarRSI[0].DetPoints[ii].Coordinates[0];
-                        azimuth     = RadarRSI[0].DetPoints[ii].Coordinates[1];
-                        elevation   = RadarRSI[0].DetPoints[ii].Coordinates[2];     // note that this is elevation, NOT inclination
-                        x           = distance*cos(elevation)*cos(azimuth);
-                        y           = distance*cos(elevation)*sin(azimuth);
-                        z           = distance*sin(elevation);                      // sin(elevation) == cos(inclination)
-                        break;
-                    case 2:
-                        LogErrF(EC_Sim, "CMNode: VRx RADAR RSI receivers not supported.");
+                /* Use ideal covariance matrix with the exact receiver position */
+                int ideal_cov[] = {1,0,0,0,1,0,0,0,1};
+                for (int i = 0; i < 9; i++) {
+                    CMNode.Topics.Pub.GPS.Msg.position_covariance[i] = ideal_cov[i];
                 }
-                *(reinterpret_cast<float*>(ptr +   0)) = (float) x;
-                *(reinterpret_cast<float*>(ptr +   4)) = (float) y;
-                *(reinterpret_cast<float*>(ptr +   8)) = (float) z;
-                *(reinterpret_cast<double*>(ptr + 12)) = RadarRSI[0].DetPoints[ii].Velocity;
-                *(reinterpret_cast<double*>(ptr + 20)) = RadarRSI[0].DetPoints[ii].Power;
-
-                ptr += point_step;
+                CMNode.Topics.Pub.GPS.Msg.position_covariance_type = 2; /* Assume this is a covariance matrix of known diagonal */
             }
         }
+
+        /* Publish LiDAR RSI data from CarMaker */
+        if (CMNode.Sensor.LidarRSI.N > 0) {
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.LidarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.LidarRSI.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header timestamp */
+                CMNode.Topics.Pub.LidarRSI.Msg.header.stamp = ros::Time(LidarRSI[0].ScanTime);
+
+                /* Unordered cloud with the number of scanned points of the LiDAR */
+                CMNode.Topics.Pub.LidarRSI.Msg.width = LidarRSI[0].nScanPoints;
+
+                // LiDAR messages contain 56 bytes
+                point_step = 56;
+                row_step = point_step * LidarRSI[0].nScanPoints;
+                CMNode.Topics.Pub.LidarRSI.Msg.point_step = point_step;
+                CMNode.Topics.Pub.LidarRSI.Msg.row_step = row_step;
+
+                /* Create the output data binary blob */
+                CMNode.Topics.Pub.LidarRSI.Msg.data.resize(row_step);
+                ptr = CMNode.Topics.Pub.LidarRSI.Msg.data.data();
+
+                for (int ii = 0; ii < LidarRSI[0].nScanPoints; ii++) {
+                    /* Extract the beam spherical and convert to Cartesian coordinates */
+                    distance    = LidarRSI[0].ScanPoint[ii].LengthOF/2;                             // Flight length is double the distance
+                    azimuth     = DEG_to_RAD * Lbeams[4*N + LidarRSI[0].ScanPoint[ii].BeamID];      // BeamID is the table row, and Azimuth is column 5
+                    elevation   = DEG_to_RAD * Lbeams[5*N + LidarRSI[0].ScanPoint[ii].BeamID];      // BeamID is the table row, and Elevation is column 6
+                    x           = distance*cos(elevation)*cos(azimuth);
+                    y           = distance*cos(elevation)*sin(azimuth);
+                    z           = distance*sin(elevation);                                          // sin(elevation) == cos(inclination)
+
+                    *(reinterpret_cast<uint32_t*>(ptr +  0)) = LidarRSI[0].ScanPoint[ii].BeamID;
+                    *(reinterpret_cast<uint32_t*>(ptr +  4)) = LidarRSI[0].ScanPoint[ii].EchoID;
+                    *(reinterpret_cast<double*>(ptr +  8)) = LidarRSI[0].ScanPoint[ii].TimeOF;
+                    *(reinterpret_cast<double*>(ptr + 16)) = LidarRSI[0].ScanPoint[ii].LengthOF;
+                    *(reinterpret_cast<float*>(ptr + 24)) = (float) x;
+                    *(reinterpret_cast<float*>(ptr + 28)) = (float) y;
+                    *(reinterpret_cast<float*>(ptr + 32)) = (float) z;
+                    *(reinterpret_cast<double*>(ptr + 36)) = LidarRSI[0].ScanPoint[ii].Intensity;
+                    *(reinterpret_cast<double*>(ptr + 44)) = LidarRSI[0].ScanPoint[ii].PulseWidth;
+                    *(reinterpret_cast<uint32_t*>(ptr + 52)) = LidarRSI[0].ScanPoint[ii].nRefl;
+                    ptr += point_step;
+                }
+            }
+        }
+
+        /* Publish RADAR RSI data from CarMaker */
+        if (CMNode.Sensor.RadarRSI.N > 0) {
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.RadarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.RadarRSI.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header timestamp*/
+                CMNode.Topics.Pub.RadarRSI.Msg.header.stamp = ros::Time(RadarRSI[0].TimeFired);
+
+                /* Unordered cloud with the number of scanned points of the RADAR */
+                CMNode.Topics.Pub.RadarRSI.Msg.width = RadarRSI[0].nDetections;
+
+                // RADAR messages contain 28 bytes
+                point_step = 28;
+                row_step = point_step * RadarRSI[0].nDetections;
+                CMNode.Topics.Pub.RadarRSI.Msg.point_step = point_step;
+                CMNode.Topics.Pub.RadarRSI.Msg.row_step = row_step;
+
+                /* Create the output data binary blob */
+                CMNode.Topics.Pub.RadarRSI.Msg.data.resize(row_step);
+                ptr = CMNode.Topics.Pub.RadarRSI.Msg.data.data();
+
+                for (int ii = 0; ii < RadarRSI[0].nDetections; ii++) {
+                    switch(CMNode.Sensor.RadarRSI.OutputType) {
+                        case 0:
+                            x           = RadarRSI[0].DetPoints[ii].Coordinates[0];
+                            y           = RadarRSI[0].DetPoints[ii].Coordinates[1];
+                            z           = RadarRSI[0].DetPoints[ii].Coordinates[2];
+                            break;
+                        case 1:
+                            distance    = RadarRSI[0].DetPoints[ii].Coordinates[0];
+                            azimuth     = RadarRSI[0].DetPoints[ii].Coordinates[1];
+                            elevation   = RadarRSI[0].DetPoints[ii].Coordinates[2];     // note that this is elevation, NOT inclination
+                            x           = distance*cos(elevation)*cos(azimuth);
+                            y           = distance*cos(elevation)*sin(azimuth);
+                            z           = distance*sin(elevation);                      // sin(elevation) == cos(inclination)
+                            break;
+                        case 2:
+                            LogErrF(EC_Sim, "CMNode: VRx RADAR RSI receivers not supported.");
+                    }
+                    *(reinterpret_cast<float*>(ptr +   0)) = (float) x;
+                    *(reinterpret_cast<float*>(ptr +   4)) = (float) y;
+                    *(reinterpret_cast<float*>(ptr +   8)) = (float) z;
+                    *(reinterpret_cast<double*>(ptr + 12)) = RadarRSI[0].DetPoints[ii].Velocity;
+                    *(reinterpret_cast<double*>(ptr + 20)) = RadarRSI[0].DetPoints[ii].Power;
+
+                    ptr += point_step;
+                }
+            }
+        }
+
+        /* Publish vehicle velocity data from CarMaker */
+        if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.Velocity.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+            LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.Velocity.Job), CMCRJob_RVStr(rv));
+        } else if (rv == CMCRJob_RV_DoSomething) {
+            CMNode.Topics.Pub.Velocity.Msg.header.frame_id = "Fr1";
+            CMNode.Topics.Pub.Velocity.Msg.header.stamp = ros::Time(SimCore.Time);
+
+            /* Publish linear velocity only in the X direction */
+            CMNode.Topics.Pub.Velocity.Msg.twist.linear.x = Vehicle.v;
+            CMNode.Topics.Pub.Velocity.Msg.twist.linear.y = 0;
+            CMNode.Topics.Pub.Velocity.Msg.twist.linear.z = 0;
+            CMNode.Topics.Pub.Velocity.Msg.twist.angular.x = 0;
+            CMNode.Topics.Pub.Velocity.Msg.twist.angular.y = 0;
+            CMNode.Topics.Pub.Velocity.Msg.twist.angular.z = 0;
+        }
+        return 1;
     }
 
-    /* Publish vehicle velocity data from CarMaker */
-    if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.Velocity.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
-        LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.Velocity.Job), CMCRJob_RVStr(rv));
-    } else if (rv == CMCRJob_RV_DoSomething) {
-        CMNode.Topics.Pub.Velocity.Msg.header.frame_id = "Fr1";
-        CMNode.Topics.Pub.Velocity.Msg.header.stamp = ros::Time(SimCore.Time);
 
-        /* Publish linear velocity only in the X direction */
-        CMNode.Topics.Pub.Velocity.Msg.twist.linear.x = Vehicle.v;
-        CMNode.Topics.Pub.Velocity.Msg.twist.linear.y = 0;
-        CMNode.Topics.Pub.Velocity.Msg.twist.linear.z = 0;
-        CMNode.Topics.Pub.Velocity.Msg.twist.angular.x = 0;
-        CMNode.Topics.Pub.Velocity.Msg.twist.angular.y = 0;
-        CMNode.Topics.Pub.Velocity.Msg.twist.angular.z = 0;
-    }
 
-    /* Remember cycle for debugging */
-    CMNode.Sync.CycleJobDone    = CMNode.CycleNoRel;
-    CMNode.Model.CycleLastFlush = CMNode.CycleNoRel;
-
-    /* Put your code here
-    * - Update model parameters here?
-    * - Do some calculation...
+    /*!
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Called close to end of CarMaker cycle
+    * - See "User.c:User_Out()"
     */
+    int
+    CMRosIF_CMNode_Out (void)
+    {
+        ros::WallTime wtime = ros::WallTime::now();
+        tf2::Quaternion q;
 
-    /* Update model with values from external node only in specific cycle?
-    * - This data handling is optionl, but necessary for deterministic behaviour
-    * - if synchronization is active, incoming data remains in msg buffer until correct cycle
-    */
-    /*
-    int rv;
-    auto sync = &CMNode.Topics.Sub.Ext2CM;
+        /* Only do anything if simulation is running */
+        if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
+            return 0;
+        }
 
-    if ((rv = CMCRJob_DoJob(sync->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing
-    && rv != CMCRJob_RV_DoSomething) {
-        LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s", CMCRJob_GetName(sync->Job), CMCRJob_RVStr(rv));
-    } else if (rv == CMCRJob_RV_DoSomething) {
-    */
-        /* Something to do in sync cycle? */
-        //CMCRJob_Info(in->Job, CMNode.CycleNoRel, "CMNode: Do Something for Sync: ");
+        int rv;
 
-        /* Update model parameters here? *
-        CMNode.Model.CycleNo = CMNode.Topics.Sub.Ext2CM.Msg.cycleno;
+        /* Publish SatNav messages */
+        if (CMNode.Sensor.GNav.Active) {
+            auto out_gps = &CMNode.Topics.Pub.GPS;
 
+            if ((rv = CMCRJob_DoJob(out_gps->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_gps->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
 
-        * Remember cycle for debugging *
-        CMNode.Sync.CycleJobDone    = CMNode.CycleNoRel;
-        CMNode.Model.CycleLastFlush = CMNode.CycleNoRel;
-    }
-    */
+                /* Publish message to output */
+                out_gps->Pub.publish(out_gps->Msg);
 
-    /* Do some calculation... */
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+        }
 
-    return 1;
-}
+        /* Publish LiDAR PointCloud2 messages */
+        if (CMNode.Sensor.LidarRSI.N > 0) {
+            auto out_lidar = &CMNode.Topics.Pub.LidarRSI;
 
+            if ((rv = CMCRJob_DoJob(out_lidar->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_lidar->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
 
+                /* Publish message to output */
+                out_lidar->Pub.publish(out_lidar->Msg);
+                CMNode.Topics.Pub.LidarRSI.Msg.data.clear();
 
-/*!
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Called close to end of CarMaker cycle
-* - See "User.c:User_Out()"
-*/
-int
-CMRosIF_CMNode_Out (void)
-{
-    ros::WallTime wtime = ros::WallTime::now();
-    tf2::Quaternion q;
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+            /* Update the coordinate transformation between Fr1 and Fr_LidarRSI */
+            CMNode.Sensor.LidarRSI.TF.header.stamp = ros::Time(SimCore.Time);
+            CMNode.Global.TF_br->sendTransform(CMNode.Sensor.LidarRSI.TF);
+        }
 
-    /* Only do anything if simulation is running */
-    if (CMNode.Cfg.Mode == CMNode_Mode_Disabled || SimCore.State != SCState_Simulate) {
-        return 0;
-    }
+        /* Publish RADAR PointCloud2 messages */
+        if (CMNode.Sensor.RadarRSI.N > 0) {
+            auto out_radar = &CMNode.Topics.Pub.RadarRSI;
 
-    int rv;
+            if ((rv = CMCRJob_DoJob(out_radar->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_radar->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
 
-    /* Publish SatNav messages */
-    if (CMNode.Sensor.GNav.Active) {
-        auto out_gps = &CMNode.Topics.Pub.GPS;
+                /* Publish message to output */
+                out_radar->Pub.publish(out_radar->Msg);
+                CMNode.Topics.Pub.RadarRSI.Msg.data.clear();
 
-        if ((rv = CMCRJob_DoJob(out_gps->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
-            LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_gps->Job), CMCRJob_RVStr(rv));
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+            /* Update the coordinate transformation between Fr1 and Fr_RadarRSI */
+            CMNode.Sensor.RadarRSI.TF.header.stamp = ros::Time(SimCore.Time);
+            CMNode.Global.TF_br->sendTransform(CMNode.Sensor.RadarRSI.TF);
+        }
+
+        /* Publish vehicle velocity messages */
+        auto out_vel = &CMNode.Topics.Pub.Velocity;
+
+        if ((rv = CMCRJob_DoJob(out_vel->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+            LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_vel->Job), CMCRJob_RVStr(rv));
         } else if (rv == CMCRJob_RV_DoSomething) {
 
             /* Publish message to output */
-            out_gps->Pub.publish(out_gps->Msg);
+            out_vel->Pub.publish(out_vel->Msg);
 
             /* Remember cycle for debugging */
             CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
         }
-    }
 
-    /* Publish LiDAR PointCloud2 messages */
-    if (CMNode.Sensor.LidarRSI.N > 0) {
-        auto out_lidar = &CMNode.Topics.Pub.LidarRSI;
+        /* Update the coordinate transformation between Fr0 and Fr1 */
+        CMNode.Vhcl.TF.header.stamp = ros::Time(SimCore.Time);
+        CMNode.Vhcl.TF.header.frame_id = "Fr0";
+        CMNode.Vhcl.TF.child_frame_id = "Fr1";
+        CMNode.Vhcl.TF.transform.translation.x = Car.Fr1.t_0[0];
+        CMNode.Vhcl.TF.transform.translation.y = Car.Fr1.t_0[1];
+        CMNode.Vhcl.TF.transform.translation.z = Car.Fr1.t_0[2];
+        q.setRPY(Car.Fr1.r_zyx[0], Car.Fr1.r_zyx[1], Car.Fr1.r_zyx[2]);
+        CMNode.Vhcl.TF.transform.rotation.x = q.x();
+        CMNode.Vhcl.TF.transform.rotation.y = q.y();
+        CMNode.Vhcl.TF.transform.rotation.z = q.z();
+        CMNode.Vhcl.TF.transform.rotation.w = q.w();
+        CMNode.Global.TF_br->sendTransform(CMNode.Vhcl.TF);
 
-        if ((rv = CMCRJob_DoJob(out_lidar->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
-            LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_lidar->Job), CMCRJob_RVStr(rv));
-        } else if (rv == CMCRJob_RV_DoSomething) {
-
-            /* Publish message to output */
-            out_lidar->Pub.publish(out_lidar->Msg);
-            CMNode.Topics.Pub.LidarRSI.Msg.data.clear();
-
-            /* Remember cycle for debugging */
-            CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+        /* Publish "/clock" topic after all other other topics are published
+        * - Is the order of arrival in other node identical? */
+        if (CMNode.Cfg.nCyclesClock > 0 && CMNode.CycleNoRel%CMNode.Cfg.nCyclesClock == 0) {
+            CMNode.Topics.Pub.Clock.Msg.clock = ros::Time(SimCore.Time);
+            CMNode.Topics.Pub.Clock.Pub.publish(CMNode.Topics.Pub.Clock.Msg);
         }
-        /* Update the coordinate transformation between Fr1 and Fr_LidarRSI */
-        CMNode.Sensor.LidarRSI.TF.header.stamp = ros::Time(SimCore.Time);
-        CMNode.Global.TF_br->sendTransform(CMNode.Sensor.LidarRSI.TF);
+
+        /* ToDo: When increase? */
+        CMNode.CycleNoRel++;
+
+        return 1;
     }
 
-    /* Publish RADAR PointCloud2 messages */
-    if (CMNode.Sensor.RadarRSI.N > 0) {
-        auto out_radar = &CMNode.Topics.Pub.RadarRSI;
 
-        if ((rv = CMCRJob_DoJob(out_radar->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
-            LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_radar->Job), CMCRJob_RVStr(rv));
-        } else if (rv == CMCRJob_RV_DoSomething) {
 
-            /* Publish message to output */
-            out_radar->Pub.publish(out_radar->Msg);
-            CMNode.Topics.Pub.RadarRSI.Msg.data.clear();
+    /*!
+    * Important:
+    * - DO NOT CHANGE FUNCTION NAME !!!
+    * - Automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Called one Time when CarMaker ends
+    * - See "User.c:User_End()"
+    */
+    int
+    CMRosIF_CMNode_End (void)
+    {
 
-            /* Remember cycle for debugging */
-            CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+        LOG("%s: End", __func__);
+
+        if (ros::isInitialized()) {
+
+            /* Needs to be called before program exists, otherwise
+            * "boost" error due to shared library and default deconstructor */
+            CMNode.Cfg.Ros.Node->shutdown();
+
+            /* ToDo:
+            * - Blocking call? Wait until shutdown has finished?
+            * - Optional? */
+            ros::shutdown();
         }
-        /* Update the coordinate transformation between Fr1 and Fr_RadarRSI */
-        CMNode.Sensor.RadarRSI.TF.header.stamp = ros::Time(SimCore.Time);
-        CMNode.Global.TF_br->sendTransform(CMNode.Sensor.RadarRSI.TF);
+
+        return 1;
     }
 
-    /* Publish vehicle velocity messages */
-    auto out_vel = &CMNode.Topics.Pub.Velocity;
 
-    if ((rv = CMCRJob_DoJob(out_vel->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
-        LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_vel->Job), CMCRJob_RVStr(rv));
-    } else if (rv == CMCRJob_RV_DoSomething) {
 
-        /* Publish message to output */
-        out_vel->Pub.publish(out_vel->Msg);
+    /*!
+    * Important:
+    * - NOT automatically called by CMRosIF extension
+    *
+    * Description:
+    * - Example of user generated function
+    * - Can be accessed in other sources, e.g. User.c
+    * - Use "CMRosIF_GetSymbol()" to get symbol (see "lib/CMRosIF.h")
+    *
+    */
+    int
+    CMRosIF_CMNode_MyFunc (char *LogMsg)
+    {
 
-        /* Remember cycle for debugging */
-        CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+        LOG("%s: %s",  __func__, LogMsg);
+        return 1;
     }
 
-    /* Update the coordinate transformation between Fr0 and Fr1 */
-    CMNode.Vhcl.TF.header.stamp = ros::Time(SimCore.Time);
-    CMNode.Vhcl.TF.header.frame_id = "Fr0";
-    CMNode.Vhcl.TF.child_frame_id = "Fr1";
-    CMNode.Vhcl.TF.transform.translation.x = Car.Fr1.t_0[0];
-    CMNode.Vhcl.TF.transform.translation.y = Car.Fr1.t_0[1];
-    CMNode.Vhcl.TF.transform.translation.z = Car.Fr1.t_0[2];
-    q.setRPY(Car.Fr1.r_zyx[0], Car.Fr1.r_zyx[1], Car.Fr1.r_zyx[2]);
-    CMNode.Vhcl.TF.transform.rotation.x = q.x();
-    CMNode.Vhcl.TF.transform.rotation.y = q.y();
-    CMNode.Vhcl.TF.transform.rotation.z = q.z();
-    CMNode.Vhcl.TF.transform.rotation.w = q.w();
-    CMNode.Global.TF_br->sendTransform(CMNode.Vhcl.TF);
-
-
-    // auto out = &CMNode.Topics.Pub.CM2Ext;
-    //
-    // /* Communicate to External ROS Node in this cycle?
-    // * - The job mechanism is optional and can be e.g. replaced by simple modulo on current cycle
-    // */
-    // if ((rv = CMCRJob_DoJob(out->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing
-    // && rv != CMCRJob_RV_DoSomething) {
-    //     LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out->Job), CMCRJob_RVStr(rv));
-    // } else if (rv == CMCRJob_RV_DoSomething) {
-    //
-    //     out->Msg.cycleno      = CMNode.CycleNoRel;
-    //     out->Msg.time         = ros::Time(SimCore.Time);
-    //     out->Msg.synthdelay   = CMNode.Sync.SynthDelay;
-    //
-    //     /* Header stamp and frame needs to be set manually! */
-    //
-    //     /* provide system time close to data is sent */
-    //     wtime = ros::WallTime::now();
-    //     out->Msg.header.stamp.sec  = wtime.sec;
-    //     out->Msg.header.stamp.nsec = wtime.nsec;
-    //
-    //     out->Pub.publish(out->Msg);
-    //
-    //     /* Remember cycle for debugging */
-    //     CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
-    // }
-
-
-    /* Publish "/clock" topic after all other other topics are published
-    * - Is the order of arrival in other node identical? */
-    if (CMNode.Cfg.nCyclesClock > 0 && CMNode.CycleNoRel%CMNode.Cfg.nCyclesClock == 0) {
-        CMNode.Topics.Pub.Clock.Msg.clock = ros::Time(SimCore.Time);
-        CMNode.Topics.Pub.Clock.Pub.publish(CMNode.Topics.Pub.Clock.Msg);
-    }
-
-    /* ToDo: When increase? */
-    CMNode.CycleNoRel++;
-
-    return 1;
-}
-
-
-
-/*!
-* Important:
-* - DO NOT CHANGE FUNCTION NAME !!!
-* - Automatically called by CMRosIF extension
-*
-* Description:
-* - Called one Time when CarMaker ends
-* - See "User.c:User_End()"
-*/
-int
-CMRosIF_CMNode_End (void)
-{
-
-    LOG("%s: End", __func__);
-
-    if (ros::isInitialized()) {
-
-        /* Needs to be called before program exists, otherwise
-        * "boost" error due to shared library and default deconstructor */
-        CMNode.Cfg.Ros.Node->shutdown();
-
-        /* ToDo:
-        * - Blocking call? Wait until shutdown has finished?
-        * - Optional? */
-        ros::shutdown();
-    }
-
-    return 1;
-}
-
-
-
-/*!
-* Important:
-* - NOT automatically called by CMRosIF extension
-*
-* Description:
-* - Example of user generated function
-* - Can be accessed in other sources, e.g. User.c
-* - Use "CMRosIF_GetSymbol()" to get symbol (see "lib/CMRosIF.h")
-*
-*/
-int
-CMRosIF_CMNode_MyFunc (char *LogMsg)
-{
-
-    LOG("%s: %s",  __func__, LogMsg);
-    return 1;
-}
-
-#ifdef __cplusplus
+    #ifdef __cplusplus
 }
 #endif
