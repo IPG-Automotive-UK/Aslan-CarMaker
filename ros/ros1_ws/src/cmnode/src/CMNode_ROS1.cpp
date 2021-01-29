@@ -741,36 +741,38 @@ extern "C" {
         /* Prepare Jobs for publish and subscribe
         * - Special use case:
         *   - Topic in and Topic out use same cycle time with relative shift!
+        *   - CarMaker starts publishing at 1ms instead of 0ms, so a 1ms offset
+        *     has been artificially added here
         */
 
         /* SDControl sub job */
         job         = CMNode.Topics.Sub.SDC.Job;
         cycletime   = CMNode.Topics.Sub.SDC.CycleTime;
-        cycleoff    = CMNode.Topics.Sub.SDC.CycleOffset;
+        cycleoff    = CMNode.Topics.Sub.SDC.CycleOffset+1;
         CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Default);
 
         /* GPS pub job */
         job         = CMNode.Topics.Pub.GPS.Job;
         cycletime   = CMNode.Sensor.GNav.UpdRate;
-        cycleoff    = CMNode.Sensor.GNav.nCycleOffset;
+        cycleoff    = CMNode.Sensor.GNav.nCycleOffset+1;
         CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
         /* LiDAR RSI pub job */
         job         = CMNode.Topics.Pub.LidarRSI.Job;
         cycletime   = CMNode.Sensor.LidarRSI.UpdRate;
-        cycleoff    = CMNode.Sensor.LidarRSI.nCycleOffset;
+        cycleoff    = CMNode.Sensor.LidarRSI.nCycleOffset+1;
         CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
         /* RADAR RSI pub job */
         job         = CMNode.Topics.Pub.RadarRSI.Job;
         cycletime   = CMNode.Sensor.RadarRSI.UpdRate;
-        cycleoff    = CMNode.Sensor.RadarRSI.nCycleOffset;
+        cycleoff    = CMNode.Sensor.RadarRSI.nCycleOffset+1;
         CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
         /* Vehicle Velocity pub job */
         job         = CMNode.Topics.Pub.Velocity.Job;
         cycletime   = CMNode.Topics.Pub.Velocity.CycleTime;
-        cycleoff    = CMNode.Topics.Pub.Velocity.CycleOffset;
+        cycleoff    = CMNode.Topics.Pub.Velocity.CycleOffset+1;
         CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
 
@@ -1134,7 +1136,6 @@ extern "C" {
     int
     CMRosIF_CMNode_Out (void)
     {
-        ros::WallTime wtime = ros::WallTime::now();
         tf2::Quaternion q;
 
         /* Only do anything if simulation is running */
@@ -1230,7 +1231,7 @@ extern "C" {
 
         /* Publish "/clock" topic after all other other topics are published
         * - Is the order of arrival in other node identical? */
-        if (CMNode.Cfg.nCyclesClock > 0 && CMNode.CycleNoRel%CMNode.Cfg.nCyclesClock == 0) {
+        if (CMNode.Cfg.nCyclesClock >= 0 && CMNode.CycleNoRel%CMNode.Cfg.nCyclesClock == 0) {
             CMNode.Topics.Pub.Clock.Msg.clock = ros::Time(SimCore.Time);
             CMNode.Topics.Pub.Clock.Pub.publish(CMNode.Topics.Pub.Clock.Msg);
         }
