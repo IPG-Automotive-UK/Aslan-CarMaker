@@ -216,12 +216,6 @@ User_Init (void)
     if ((rv=CMRosIF_Init()) < 0)  /* Check for zero removed to force Log message of missing symbol */
 	return rv;
 
-    /* Example to get own function from CarMaker ROS Node shared library*/
-    void (*myfunc) (char *LogMsg) = CMRosIF_GetSymbol("CMRosIF_CMNode_MyFunc");
-
-    if (myfunc != NULL)
-	myfunc("Here is my own function from the CarMaker ROS Node library!");
-
 #endif
 
     return 0;

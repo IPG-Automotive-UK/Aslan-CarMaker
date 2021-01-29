@@ -16,7 +16,7 @@ Integration of CarMaker with project ASLAN, open-source autonomous software for 
 
 These have not been tested in the development process, but with slight modifications should work.
 
-Any CarMaker 9 version can be used with slight modifications to the start and build scripts. These are documented below.
+Any CarMaker 9 version can be used with slight modifications to the start and build scripts. These are [documented below](#change-carmaker-version-optional).
 
 For ROS Melodic and Ubuntu 18.04, the [Melodic branch](https://github.com/project-aslan/Aslan/tree/melodic) of Project Aslan should be used instead of the master branch.
 
@@ -73,6 +73,13 @@ For convenience, Project Aslan is included as a submodule of this repository. To
 git clone --recurse-submodules https://github.com/IPG-Automotive-UK/Aslan-CarMaker.git
 ```
 
+#### Change CarMaker Version (optional)
+To compile and use a different CarMaker 9 version other than 9.1, several changes to the code need to be made. These changes are described here and must be made before the project is built. All paths below are relative to the project root folder.
+
+1. CMStart.sh - the command ```/opt/ipg/bin/CM-9.1``` (line 7) needs to point to the main CarMaker executable that you want to use. Alter the name and location of the executable as appropriate.
+2. src/Makefile - the command ```include /opt/ipg/carmaker/linux64-9.1/include/MakeDefs.linux64``` (line 16) needs to point to the correct MakeDefs file for the desired CarMaker version. Alter the CarMaker source directory path as appropriate.
+3. ros/ros1_ws/src/cmnode/CMakeLists.txt - The two strings that set the CarMaker version ```set(CARMAKER_VER 9.1)``` and ```set(CARMAKER_NUMVER 90100)``` (line 18-19) need to be appropriately altered to the CarMaker version of choice.
+
 #### Build Project
 A build script `build_cmrosif.sh` is included in this project that must be run before use. It can be found in the top directory of the project. Ensure that the appropriate permission has been given to the script to run as an executable.
 ```
@@ -89,6 +96,24 @@ The script concurrently performs 3 build actions:
 1. Build the Aslan catkin workspace
 2. Build the CarMaker ROS node workspace
 3. Build the custom CarMaker executable for the project
+
+## Status
+### LiDAR RSI
+The Aslan-CarMaker implementation can currently support at most one LiDAR RSI unit. Only the first LiDAR on the CarMaker vehicle is transmitted to Aslan. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
+
+CarMaker has no user-friendly method to implement a rotating LiDAR at the moment. All sensors in CarMaker could be rotated and moved with explicit commands during the simulation. This can best be done in the underlying C code of the CarMaker ROS node implementation in the future. At the moment, a rotating LiDAR can also be effectively implemented by setting the sensor's field of view to 360°. We recommend this approach as the incoming data would be equivalent to a full cycle of a physical rotating LiDAR unit.
+
+### RADAR RSI
+The Aslan-CarMaker implementation can currently support at most one RADAR RSI unit. Only the first RADAR on the CarMaker vehicle is transmitted to Aslan. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
+
+### Global Navigation System
+A Global Navigation sensor in CarMaker can be used to simulate a physical GPS mounted on the ego vehicle. A few prerequisites need to be met to simulate a GPS system in CarMaker. They are described in detail in Section 20.14 of the CarMaker Reference Manual. In summary, the IPG Scenario that is currently running must have realistic set values for the latitude and longitude of the scenario origin. The actual date and time of the simulation need to be set in the Misc. section of the Environment parameters in CarMaker. For the chosen date of the simulation, the appropriate navigation message files must be downloaded from [NASA's archives](https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/broadcast_ephemeris_data.html).
+
+### Vehicle Control
+A simplified translator is implemented that converts Aslan vehicle control requests to CarMaker vehicle control signals. Currently these translators are linear and bypass any complex non-linear steering, gas pedal, and brake pedal parameters from the CarMaker vehicle model. Aslan sends a normalised torque request and/or steering request to CarMaker which gets linearly mapped to brake pedal position, gas pedal position, and steering wheel angle.
+
+### Documentation
+This is the main documentation that describes the higher level functionality and state of the Aslan-CarMaker implementation. The backbone of this project on the CarMaker side is a publicly available project which implements a basic ROS node inside CarMaker and synchronises it with a simple external ROS node. The example project is available in the [FAQ section](https://ipg-automotive.com/support/client-area/faq/ticket/how-can-i-use-carmaker-with-ros/) of the IPG Client Area. The documentation of the original example can still be found in the doc/ folder of this project. A lot of the information inside the documentation is not applicable to this specific project but users can still find it to be a really useful aid and source of knowledge. Specifically note that any work on node synchronisation based on a specific incoming message has been removed from the current implementation.
 
 ## Usage
 ### Start CarMaker

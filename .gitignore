@@ -1,20 +1,47 @@
+
+# Catkin build artefacts
 .catkin_tools/
-
+.catkin_workspace
 build/
-
 devel/
-
-*.log
-
-*.stderr
 
 src/cmake-build-debug/
 
-.catkin_workspace
+# Logging outputs
+*.log
+*.stderr
 
+# 3D models
+stl.zip
+
+# IntelliJ IDE artefacts
 .idea/
 
-*.pyc
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
+# Ignore 'make' build artefacts
+src/*.o
+src/app_tmp.c
+src/.version_win32
+src/.version_win64
+src/.version_linux32
+src/.version_linux64
+src/CarMaker.win32.exe
+src/CarMaker.win64.exe
+src/CarMaker.win32.pdb
+src/CarMaker.win64.pdb
+src/CarMaker.linux32
+src/CarMaker.linux64
 
-.stl.zip
+# Ignore Visual Studio project metadata
+src/.vs/
+
+# Ignore Visual C++ build artefacts
+src/Debug/
+src/Release/
+
+# Ignore Eclipse C/C++ build artefacts
+src/Work/
