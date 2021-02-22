@@ -16,7 +16,7 @@ Integration of CarMaker with project ASLAN, open-source autonomous software for 
 
 Any CarMaker 9 version can be used with slight modifications to the start and build scripts. These are [documented below](#change-carmaker-version-optional).
 
-For ROS Kinetic and Ubuntu 16.04, the [Masater branch](https://github.com/project-aslan/Aslan/tree/master) of Project Aslan should be used instead of the melodic branch.
+For ROS Kinetic and Ubuntu 16.04, the [Master branch](https://github.com/project-aslan/Aslan/tree/master) of Project Aslan should be used instead of the melodic branch.
 
 
 ## Installation
