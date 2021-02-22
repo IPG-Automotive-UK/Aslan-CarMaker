@@ -4,29 +4,27 @@ Integration of CarMaker with project ASLAN, open-source autonomous software for 
 ## Requirements
 ### Supported
 - CarMaker 9.1
-- Ubuntu 16.04 LTS
-- ROS 1 Kinetic [ros-kinetic-desktop-full](http://wiki.ros.org/kinetic/Installation/Ubuntu)
+- Ubuntu 18.04 LTS
+- ROS 1 Melodic [ros-melodic-desktop-full](http://wiki.ros.org/melodic/Installation/Ubuntu)
 - Catkin Command Line Tools [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html)
 
 ### Prospective
 
 - CarMaker 9.X.X
-- Ubuntu 18.04 LTS
-- ROS 1 Melodic [ros-melodic-desktop-full](http://wiki.ros.org/melodic/Installation/Ubuntu)
-
-These have not been tested in the development process, but with slight modifications should work.
+- Ubuntu 16.04 LTS
+- ROS 1 Kinetic [ros-kinetic-desktop-full](http://wiki.ros.org/kinetic/Installation/Ubuntu)
 
 Any CarMaker 9 version can be used with slight modifications to the start and build scripts. These are [documented below](#change-carmaker-version-optional).
 
-For ROS Melodic and Ubuntu 18.04, the [Melodic branch](https://github.com/project-aslan/Aslan/tree/melodic) of Project Aslan should be used instead of the master branch.
+For ROS Kinetic and Ubuntu 16.04, the [Masater branch](https://github.com/project-aslan/Aslan/tree/master) of Project Aslan should be used instead of the melodic branch.
 
 
 ## Installation
 ### ROS
-- Follow the installation instructions on http://wiki.ros.org/ROS/Installation
+- Follow the installation instructions on http://wiki.ros.org/melodic/Installation/Ubuntu
 - By default ROS installation is located in "/opt/ros/"
-- Create symbolic link "/opt/ros/ros1" that points to e.g. "/opt/ros/kinetic"
-    - e.g. “cd /opt/ros; sudo ln -sfn kinetic ros1”
+- Create symbolic link "/opt/ros/ros1" that points to e.g. "/opt/ros/melodic"
+    - e.g. “cd /opt/ros; sudo ln -sfn melodic ros1”
     - this is only to simplify usage of different ROS versions
     - otherwise you have to change paths with every ROS update (e.g. in scripts)
 - Check ROS installation
