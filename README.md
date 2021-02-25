@@ -32,16 +32,16 @@ For ROS Melodic and Ubuntu 18.04, the [Melodic branch](https://github.com/projec
 - Check ROS installation
     - roscore
         - Open a new terminal
-        - source /opt/ros/ros1/setup.bash
-        - roscore
+        - type ```source /opt/ros/ros1/setup.bash```
+        - type ```roscore```
     - Talker
         - Open a second terminal
-        - source /opt/ros/ros1/setup.bash
-        - rosrun roscpp_tutorials talker
+        - type ```source /opt/ros/ros1/setup.bash```
+        - type ```rosrun roscpp_tutorials talker```
     - Listener
         - Open a third terminal
-        - source /opt/ros/ros1/setup.bash
-        - rosrun roscpp_tutorials listener
+        - type ```source /opt/ros/ros1/setup.bash```
+        - type ```rosrun roscpp_tutorials listener```
 
 ### CarMaker
 The CarMaker installation files can be found in the [IPG Client Area](https://ipg-automotive.com/support/client-area/installation-files/). The Client Area requires that the user have a registered account on the system, which should be straightforward to create.
@@ -78,13 +78,14 @@ To compile and use a different CarMaker 9 version other than 9.1, several change
 
 1. CMStart.sh - the command ```/opt/ipg/bin/CM-9.1``` (line 7) needs to point to the main CarMaker executable that you want to use. Alter the name and location of the executable as appropriate.
 2. src/Makefile - the command ```include /opt/ipg/carmaker/linux64-9.1/include/MakeDefs.linux64``` (line 16) needs to point to the correct MakeDefs file for the desired CarMaker version. Alter the CarMaker source directory path as appropriate.
-3. ros/ros1_ws/src/cmnode/CMakeLists.txt - The two strings that set the CarMaker version ```set(CARMAKER_VER 9.1)``` and ```set(CARMAKER_NUMVER 90100)``` (line 18-19) need to be appropriately altered to the CarMaker version of choice.
+3. ros/ros1_ws/src/cmnode/CMakeLists.txt - The two strings that set the CarMaker version ```set(CARMAKER_VER 9.1)``` and ```set(CARMAKER_NUMVER 90100)``` (line 18-19) need to be appropriately altered to the CarMaker version of choice. The format for ```CARMAKER_NUMVER``` is ```<nDigitsMajor>.<2DigitsMinor>.<2DigitsPatch>``` where the ```MAJOR.MINOR.PATCH``` is the actual CarMaker version.
 
 #### Build Project
-A build script `build_cmrosif.sh` is included in this project that must be run before use. It can be found in the top directory of the project. Ensure that the appropriate permission has been given to the script to run as an executable.
+A build script `build_cmrosif.sh` is included in this project that must be run before use. It can be found in the top directory of the project. Ensure that the appropriate permission has been given to the script to run as an executable, as well as the `ros/ros1_ws/build.sh` that builds the CarMaker node itself.
 ```
 cd Aslan-CarMaker
 chmod +x build_cmrosif.sh
+chmod +x ros/ros1_ws/build.sh
 ```
 
 You only need to do this once, after which the script can be executed from the terminal:
