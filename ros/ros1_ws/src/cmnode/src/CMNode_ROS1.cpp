@@ -1,6 +1,6 @@
 /*!
 ******************************************************************************
-**  CarMaker - Version 9.1
+**  CarMaker - Version 10.0
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -62,8 +62,8 @@
 *  - String:    e.g. <Major>.<Minor>.<Patch>
 *  - Numerical: e.g. <nDigitsMajor><2DigitsMinor><2DigitsPatch>
 */
-#define CMNODE_VERSION "0.9.0"
-#define CMNODE_NUMVER  900
+#define CMNODE_VERSION "0.10.0"
+#define CMNODE_NUMVER  1000
 
 
 /* NDEBUG is set in CarMaker Makefile/MakeDefs in OPT_CFLAGS */
