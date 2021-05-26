@@ -25,6 +25,7 @@ __pycache__/
 # Ignore 'make' build artefacts
 src/*.o
 src/app_tmp.c
+src/.depend
 src/.version_win32
 src/.version_win64
 src/.version_linux32
@@ -45,6 +46,9 @@ src/Release/
 
 # Ignore Eclipse C/C++ build artefacts
 src/Work/
+
+# Ignore output 'bin' folder for compiled executables
+bin/
 
 # Ignore CarMaker project outputs and cache
 SimOutput/
