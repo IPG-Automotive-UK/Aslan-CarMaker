@@ -1,6 +1,6 @@
 #INFOFILE1.1 - Do not remove this line!
 FileIdent = Scenario-Config 1.0
-FileCreator = CarMaker 9.1 2020-10-20
+FileCreator = CarMaker 10.0
 Scene.Country = GBR
 Scene.Country2 =
 Scene.DrivingSide = right
@@ -19,3 +19,5 @@ Import.HDLM.SaveLogin = 0
 Import.HDLM.UseProxy = 0
 Import.HDLM.ProxyAddr =
 Import.HDLM.ProxyPort =
+Import.HDLM.ImportTrfSigns = 0
+Import.HDLM.ImportTrfLights = 0

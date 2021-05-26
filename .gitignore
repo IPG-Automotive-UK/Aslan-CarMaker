@@ -45,3 +45,7 @@ src/Release/
 
 # Ignore Eclipse C/C++ build artefacts
 src/Work/
+
+# Ignore CarMaker project outputs and cache
+SimOutput/
+Movie/.road_cache/

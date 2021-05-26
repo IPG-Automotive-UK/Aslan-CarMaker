@@ -1,6 +1,6 @@
 #INFOFILE1.1 - Do not remove this line!
-FileIdent = CarMaker-Car 9
-FileCreator = CarMaker 2021-01-12 16:44:22
+FileIdent = CarMaker-Car 10
+FileCreator = CarMaker 10.0
 
 
 ## Assembly ##############################################################
@@ -12,8 +12,8 @@ Description:
 	Tire: RT 255/35 R20, RT 295/30 R20
 
 Eng.Kind = Rigid
-Eng.Joint.pos = 0.0  0.0  0.0
-Eng.Orientation = 0.0  0.0  0.0
+Eng.Joint.pos = 0.0 0.0 0.0
+Eng.Orientation = 0.0 0.0 0.0
 
 Hitch.System =
 Hitch.pos = -0.1 0.0 0.4
@@ -21,32 +21,32 @@ Jack.fl.pos = 3.048 0.793 0.313
 Jack.fr.pos = 3.048 -0.793 0.313
 Jack.rl.pos = 1.364 0.814 0.313
 Jack.rr.pos = 1.364 -0.814 0.313
-Virtual.PoA = 2.206  0.000  0.498
+Virtual.PoA = 2.206 0.000 0.498
 
 WheelCarrier.fl.mass = 15.44
-WheelCarrier.fl.I = 0.224  0.224  0.224  -0.0  -0.0  -0.0
-WheelCarrier.fl.pos = 3.517  0.793  0.313
+WheelCarrier.fl.I = 0.224 0.224 0.224 -0.0 -0.0 -0.0
+WheelCarrier.fl.pos = 3.517 0.793 0.313
 WheelCarrier.fr.mass = 15.44
-WheelCarrier.fr.I = 0.224  0.224  0.224  -0.0  -0.0  -0.0
-WheelCarrier.fr.pos = 3.517  -0.793  0.313
+WheelCarrier.fr.I = 0.224 0.224 0.224 -0.0 -0.0 -0.0
+WheelCarrier.fr.pos = 3.517 -0.793 0.313
 WheelCarrier.rl.mass = 29.066
-WheelCarrier.rl.I = 0.342  0.342  0.342  -0.0  -0.0  -0.0
-WheelCarrier.rl.pos = 0.895  0.814  0.313
+WheelCarrier.rl.I = 0.342 0.342 0.342 -0.0 -0.0 -0.0
+WheelCarrier.rl.pos = 0.895 0.814 0.313
 WheelCarrier.rr.mass = 29.066
-WheelCarrier.rr.I = 0.342  0.342  0.342  -0.0  -0.0  -0.0
-WheelCarrier.rr.pos = 0.895  -0.814  0.313
+WheelCarrier.rr.I = 0.342 0.342 0.342 -0.0 -0.0 -0.0
+WheelCarrier.rr.pos = 0.895 -0.814 0.313
 Wheel.fl.mass = 32.076
-Wheel.fl.I = 1.042  2.084  1.042
-Wheel.fl.pos = 3.517  0.793  0.313
+Wheel.fl.I = 1.042 2.084 1.042
+Wheel.fl.pos = 3.517 0.793 0.313
 Wheel.fr.mass = 32.076
-Wheel.fr.I = 1.042  2.084  1.042
-Wheel.fr.pos = 3.517  -0.793  0.313
+Wheel.fr.I = 1.042 2.084 1.042
+Wheel.fr.pos = 3.517 -0.793 0.313
 Wheel.rl.mass = 27.86
-Wheel.rl.I = 0.993  1.985  0.993
-Wheel.rl.pos = 0.895  0.814  0.313
+Wheel.rl.I = 0.993 1.985 0.993
+Wheel.rl.pos = 0.895 0.814 0.313
 Wheel.rr.mass = 27.86
-Wheel.rr.I = 0.993  1.985  0.993
-Wheel.rr.pos = 0.895  -0.814  0.313
+Wheel.rr.I = 0.993 1.985 0.993
+Wheel.rr.pos = 0.895 -0.814 0.313
 
 PowerTrain.Engine.Bdy.pos = 0.0 0.0 0.0
 PowerTrain.Engine.Bdy.Ori = 0.0 0.0 0.0
@@ -110,14 +110,14 @@ PowerTrain.PowerSupply.BattHV.Bdy.1.Mounting = Fr1A
 PowerTrain.PowerSupply.BattHV.Bdy.1.RefFr = FrD
 
 TrimLoad.0.mass = 0.0 0
-TrimLoad.0.I = 0.0  0.0  0.0
-TrimLoad.0.pos = 2.206  0.395  0.526
+TrimLoad.0.I = 0.0 0.0 0.0
+TrimLoad.0.pos = 2.206 0.395 0.526
 TrimLoad.0.mounted = Fr1A
 TrimLoad.0.RefFr = FrD
 TrimLoad.0.name = Trim Load 0
 TrimLoad.1.mass = 0.0 0
-TrimLoad.1.I = 0.0  0.0  0.0
-TrimLoad.1.pos = 2.206  -0.395  0.526
+TrimLoad.1.I = 0.0 0.0 0.0
+TrimLoad.1.pos = 2.206 -0.395 0.526
 TrimLoad.1.mounted = Fr1A
 TrimLoad.1.RefFr = FrD
 TrimLoad.1.name = Trim Load 1
@@ -196,10 +196,13 @@ Vhclbody.Comment:
 
 
 ## Suspensions ###########################################################
+SuspF.Spring.Kind = Hookean 1
 SuspF.Spring.Amplify = 1.0
 SuspF.Spring.l0 = 0.269
 SuspF.Spring = 40000.0
-SuspF.SecSpring.Amplify = 1.0
+SuspF.Parasitic.Stiffness.Kind =
+SuspF.Parasitic.Friction.Kind =
+SuspF.Damper.Kind = Newtonian 1
 SuspF.Damp_Push.Amplify = 1.0
 SuspF.Damp_Push:
 	0.0 0.0
@@ -210,7 +213,7 @@ SuspF.Damp_Pull:
 	0.0 0.0
 	0.1 348.03
 	1.0 2400.3
-SuspF.Damper.TopMnt.On = 0
+SuspF.Buffer.Kind = Hookean 1
 SuspF.Buf_Push.tz0 = 0.03
 SuspF.Buf_Push.Amplify = 1.0
 SuspF.Buf_Push:
@@ -238,17 +241,20 @@ SuspF.Buf_Pull:
 	0.015 1380.5
 	0.02 3733.8
 	0.025 9467.6
+SuspF.Stabi.Kind = Hookean 1
 SuspF.Stabi.Amplify = 1.0
-SuspF.Stabi.Unit = N/m
 SuspF.Stabi = 13004.0
 SuspF.Kin.N = 1
 SuspF.Com.N = 0
 SuspF.Kin.0.FName = Examples/McPherson_FrontAxle.skc
 SuspF.WhlBearing.On = 0
+SuspR.Spring.Kind = Hookean 1
 SuspR.Spring.Amplify = 1.0
 SuspR.Spring.l0 = 0.067
 SuspR.Spring = 50000.0
-SuspR.SecSpring.Amplify = 1.0
+SuspR.Parasitic.Stiffness.Kind =
+SuspR.Parasitic.Friction.Kind =
+SuspR.Damper.Kind = Newtonian 1
 SuspR.Damp_Push.Amplify = 1.0
 SuspR.Damp_Push:
 	0.0 0.0
@@ -259,7 +265,7 @@ SuspR.Damp_Pull:
 	0.0 0.0
 	0.1 362.54
 	1.0 2545.3
-SuspR.Damper.TopMnt.On = 0
+SuspR.Buffer.Kind = Hookean 1
 SuspR.Buf_Push.tz0 = 0.043
 SuspR.Buf_Push.Amplify = 1.0
 SuspR.Buf_Push:
@@ -295,8 +301,8 @@ SuspR.Buf_Pull:
 	0.02 2303.6
 	0.025 5376.7
 	0.03 12047.0
+SuspR.Stabi.Kind = Hookean 1
 SuspR.Stabi.Amplify = 1.0
-SuspR.Stabi.Unit = N/m
 SuspR.Stabi = 5554.7
 SuspR.Kin.N = 1
 SuspR.Com.N = 0
@@ -315,6 +321,7 @@ SuspR.Kin.0.L.lBuf = 0.0 -1.0 0.0
 SuspR.Kin.0.L.lStabi = 0.0 1.0 0.0
 SuspR.WhlBearing.On = 0
 SuspExtFrcs.Kind =
+SuspControl.Kind =
 Susp.Comment:
 
 
@@ -470,87 +477,154 @@ PowerTrain.BCU.Kind =
 PowerTrain.PowerSupply.Kind =
 
 
-## Sensors ###############################################################
-Sensor.SAngle.N = 1
-Sensor.SAngle.0.name = SL00
-Sensor.SAngle.0.pos = 2.206 0.0 0.526
-Sensor.SAngle.0.Mounting = Fr1A
-Sensor.Inertial.N = 0
-Sensor.Object.N = 0
-Sensor.Object.ObservRadius = 500.0
-Sensor.FSpace.N = 0
-Sensor.TSign.N = 0
-Sensor.Line.N = 0
-Sensor.Road.N = 0
-Sensor.Collision.Active = 0
-Sensor.GNav.pos = 3 0.0 0.5
-Sensor.GNav.Mounting = Fr1A
-Sensor.GNav.UpdRate = 10
-Sensor.GNav.nCycleOffset = 0
-Sensor.GNav.ElevationMask = 10.0
-Sensor.GNav.DirectView = 0
-Sensor.GNav.ShowDDict = 0
-Sensor.GNav.ReceiverClockError.Active = 1
-Sensor.GNav.ReceiverClockError.std = 15.0
-Sensor.GNav.ReceiverClockError.corrTime = 3600.0
-Sensor.GNav.CommonMode.Active = 1
-Sensor.GNav.EphError.std = 3.0
-Sensor.GNav.EphError.corrTime = 1800.0
-Sensor.GNav.IonoModel.Active = 0
-Sensor.GNav.IonoError.std = 5.0
-Sensor.GNav.IonoError.corrTime = 1800.0
-Sensor.GNav.TropoModel.Active = 0
-Sensor.GNav.TropoError.std = 2.0
-Sensor.GNav.TropoError.corrTime = 3600.0
-Sensor.GNav.ReceiverNoise.Active = 1
-Sensor.GNav.ReceiverNoise.stdPsr = 0.1
-Sensor.GNav.ReceiverNoise.stdRr = 0.05
-Sensor.ObjByLane.N = 0
-Sensor.Radar.N = 0
-Sensor.Camera.N = 0
-Sensor.RadarRSILeg.N = 0
-Sensor.RadarRSI.N = 0
-Sensor.USonicRSI.N = 0
-Sensor.LidarRSI.N = 1
-Sensor.LidarRSI.Latency = 1.0 1.0
-Sensor.LidarRSI.Sensitivity = 2.0
-Sensor.LidarRSI.Visualization = 1
-Sensor.LidarRSI.CycleOffsetIgnore = 0
-Sensor.LidarRSI.0.name = LIRS00
-Sensor.LidarRSI.0.pos = 4.3 0.0 0.4
-Sensor.LidarRSI.0.rot = 0.0 0.0 0.0
-Sensor.LidarRSI.0.Range = 0.3 300.0
-Sensor.LidarRSI.0.CycleTime = 40.0
-Sensor.LidarRSI.0.nCycleOffset = 0
-Sensor.LidarRSI.0.VisColor = Yellow
-Sensor.LidarRSI.0.Mounting = Fr1A
-Sensor.LidarRSI.0.ExtMotion = 0
-Sensor.LidarRSI.0.BeamsFName = LidarRSI_Default
-Sensor.LidarRSI.0.Wavelength = 905.0
-Sensor.LidarRSI.0.SepaDist = 0.1
-Sensor.LidarRSI.0.TransmitPower = 60.0
-Sensor.LidarRSI.0.ReceptionArea = 0.4
-Sensor.LidarRSI.0.Threshold = 1.0
-Sensor.LidarRSI.0.IntensityGain:
-	-80.0 0.00
-	-70.0 0.15
-	-60.0 0.36
-	-50.0 0.56
-	-40.0 0.72
-	-30.0 0.84
-	-20.0 0.92
-	-10.0 0.98
-	0.0 1.00
-	10.0 0.98
-	20.0 0.92
-	30.0 0.84
-	40.0 0.72
-	50.0 0.56
-	60.0 0.36
-	70.0 0.15
-	80.0 0.00
-Sensor.CameraRSI.nProcesses = 0
+## Sensor Parametrizations ###############################################
+Sensor.Param.0.Name = Param_SL00
+Sensor.Param.0.Type = SAngle
+Sensor.Param.0.File =
+Sensor.Param.1.Name = Param_GNA00
+Sensor.Param.1.Type = GNav
+Sensor.Param.1.File =
+Sensor.Param.1.UpdRate = 10
+Sensor.Param.1.ElevationMask = 10.0
+Sensor.Param.1.DirectView = 0
+Sensor.Param.1.RinexQuants = 0
+Sensor.Param.1.ReceiverClockError.Active = 1
+Sensor.Param.1.ReceiverClockError.std = 15.0
+Sensor.Param.1.ReceiverClockError.corrTime = 3600.0
+Sensor.Param.1.CommonMode.Active = 1
+Sensor.Param.1.EphError.std = 3.0
+Sensor.Param.1.EphError.corrTime = 1800.0
+Sensor.Param.1.IonoModel.Active = 0
+Sensor.Param.1.IonoError.std = 5.0
+Sensor.Param.1.IonoError.corrTime = 1800.0
+Sensor.Param.1.TropoModel.Active = 0
+Sensor.Param.1.TropoError.std = 2.0
+Sensor.Param.1.TropoError.corrTime = 3600.0
+Sensor.Param.1.ReceiverNoise.Active = 1
+Sensor.Param.1.ReceiverNoise.stdPsr = 0.1
+Sensor.Param.1.ReceiverNoise.stdRr = 0.05
+Sensor.Param.1.CycleOffset = 0
+Sensor.Param.2.Name = Param_RARS00
+Sensor.Param.2.Type = RadarRSI
+Sensor.Param.2.File =
+Sensor.Param.2.FoV = 120.0 20.0
+Sensor.Param.2.Range = 0.1 150.0
+Sensor.Param.2.nRays = 671 130
+Sensor.Param.2.TransmitPower = 30
+Sensor.Param.2.NoiseBandwidth = 200
+Sensor.Param.2.SystemLosses = 0
+Sensor.Param.2.Frequency = 77.0
+Sensor.Param.2.NoiseFigure = 5
+Sensor.Param.2.NoiseTemperature = 300
+Sensor.Param.2.NoiseScaling = 1
+Sensor.Param.2.DiscreteRange = 0 200 512 0
+Sensor.Param.2.DiscreteDopplerVel = -40 40 256 0
+Sensor.Param.2.DiscreteAngle = -90 90 60 100
+Sensor.Param.2.FilterRD = 5 2 11 95
+Sensor.Param.2.FilterAngle = 8 2 12
+Sensor.Param.2.PeakRD = 2
+Sensor.Param.2.PeakAngle = 2
+Sensor.Param.2.OutputType = 0
+Sensor.Param.2.NoiseScalingRange:
+	0 10
+	10 8
+	20 5
+	40 0
+	80 -1
+Sensor.Param.2.NoiseScalingDopplerVel:
+	-20 0
+	0 0
+	20 0
+Sensor.Param.2.AntennaFName = RadarRSI_Default
+Sensor.Param.3.Name = Param_LIRS00
+Sensor.Param.3.Type = LidarRSI
+Sensor.Param.3.File =
+Sensor.Param.3.Threshold = 1.0
+Sensor.Param.3.Wavelength = 905.0
+Sensor.Param.3.ReceptionArea = 0.4
+Sensor.Param.3.BeamsFName = LidarRSI_Map
+Sensor.Param.3.IntensityGain:
+	-180.0 1
+	180 1
+Sensor.Param.3.TransmitPower = 60.0
+Sensor.Param.3.SepaDist = 0.1
+Sensor.Param.3.Range = 0.3 100.0
+Sensor.Param.3.AngularAperture = 2.0
+Sensor.Param.N = 4
 Sensor.Comment:
+
+
+## Sensor Cluster ########################################################
+SensorCluster.0.ID = 0
+SensorCluster.0.Type = RadarRSI
+SensorCluster.0.Latency = 0.0 0.0
+SensorCluster.0.ClientType = SimProg
+SensorCluster.0.Socket = 2210
+SensorCluster.0.ClientBinary =
+SensorCluster.0.ClientConnectLeadTime = 0
+SensorCluster.0.Tags = Default
+SensorCluster.0.Allocation = manual
+SensorCluster.0.Reflections = 3
+SensorCluster.0.Scattering = 0
+SensorCluster.0.CycleTime = 60
+SensorCluster.0.CycleOffset = 0
+SensorCluster.0.HDF5OutPath = %o/%h/%D/%t_%T_%C
+SensorCluster.1.ID = 0
+SensorCluster.1.Type = LidarRSI
+SensorCluster.1.Latency = 1.0 1.0
+SensorCluster.1.ClientType = SimProg
+SensorCluster.1.Socket = 2210
+SensorCluster.1.ClientBinary =
+SensorCluster.1.ClientConnectLeadTime = 0
+SensorCluster.1.Tags = Default
+SensorCluster.1.Allocation = manual
+SensorCluster.1.Reflections = 3
+SensorCluster.1.Scattering = 0
+SensorCluster.1.CycleTime = 40.0
+SensorCluster.1.CycleOffset = 0
+SensorCluster.N = 2
+
+
+## Sensor Instances ######################################################
+Sensor.N = 4
+Sensor.0.name = SL00
+Sensor.0.rot = 0.0 0.0 0.0
+Sensor.0.pos = 2.206 0.0 0.526
+Sensor.0.Visualization = 1
+Sensor.0.VisColor = 0.0 0.0 0.0
+Sensor.0.Mounting = Fr1A
+Sensor.0.Active = 1
+Sensor.0.Ref.Param = 0
+Sensor.0.Ref.Cluster =
+Sensor.1.name = GNA00
+Sensor.1.rot = 0.0 0.0 0.0
+Sensor.1.pos = 3 0.0 0.5
+Sensor.1.Visualization = 1
+Sensor.1.VisColor = 0.0 0.0 0.0
+Sensor.1.Mounting = Fr1A
+Sensor.1.Active = 0
+Sensor.1.Ref.Param = 1
+Sensor.1.Ref.Cluster =
+Sensor.2.name = RARS00
+Sensor.2.rot = 0.0 0.0 0.0
+Sensor.2.pos = 4.5 0.0 0.5
+Sensor.2.Visualization = 1
+Sensor.2.VisColor = 0.0 0.0 1.0
+Sensor.2.Mounting = Fr1A
+Sensor.2.Active = 1
+Sensor.2.Ref.Param = 2
+Sensor.2.Ref.Cluster = 0
+Sensor.2.FileOutput = 0
+Sensor.3.name = LIRS00
+Sensor.3.rot = 0.0 0.0 0.0
+Sensor.3.pos = 2 0.0 1.5
+Sensor.3.Visualization = 1
+Sensor.3.VisColor = 1.0 1.0 0.0
+Sensor.3.Mounting = Fr1A
+Sensor.3.Active = 1
+Sensor.3.Ref.Param = 3
+Sensor.3.Ref.Cluster = 1
+Sensor.3.ExtMotion = 0
 
 
 ## Vehicle Control #######################################################
@@ -597,10 +671,19 @@ Crypto.Show:
 	CM4SL.ActivateFcn
 	CM4SL.StartFcn
 	CM4SL.StopFcn
+	Sensor.N
+	Sensor.0.Active
+	Sensor.0.Ref.Cluster
+	Sensor.1.Active
+	Sensor.1.Ref.Cluster
+	Sensor.2.Active
+	Sensor.2.Ref.Cluster
+	Sensor.3.Active
+	Sensor.3.Ref.Cluster
+	SensorCluster.N
+	SensorCluster.0.Tags
+	SensorCluster.1.Tags
 Crypto.AllowAccess:
 	GenericPlugin
-
-
-## Additional ############################################################
 
 Additional.Comment:
