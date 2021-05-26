@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-**  CarMaker - Version 9.1
+**  CarMaker - Version 10.0
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -159,21 +159,13 @@ Vhcl_Register (void)
 {
     SimCore_SetVhclClass(VhclClass_Car_Id);
 
-    SuspExtFrcs_Register_Dummy();	/* Dummy model, don't remove!!! */
-    Brake_Register_NoBrake();		/* Dummy model, don't remove!!! */
     Steering_Register_Dummy();		/* Dummy model, don't remove!!! */
     Tire_Register_Dummy();		/* Dummy model, don't remove!!! */
-    Brake_Register_Dummy();		/* Dummy model, don't remove!!! */
-    PowerTrain_Register_Dummy();	/* Dummy model, don't remove!!! */
-    Engine_Register_Dummy();		/* Dummy model, don't remove!!! */
-    Clutch_Register_Dummy();		/* Dummy model, don't remove!!! */
-    GearBox_Register_Dummy();		/* Dummy model, don't remove!!! */
-    DriveLine_Register_Dummy();		/* Dummy model, don't remove!!! */
     Aero_Register_Dummy();		/* Dummy model, don't remove!!! */
 
     Susp_KnC_Register();
+    Susp_FrcEl_Register();
 
-    SuspExtFrcs_Register_SuspComponent();
 
     Steering_Register_GenAngle();
     Steering_Register_GenTorque();
@@ -192,96 +184,9 @@ Vhcl_Register (void)
     Tire_Register_IPGTire();
 
 
-    Brake_Register_Hyd();
-    BrakeHydCU_Register_HydBasic();
-    BrakeHydCU_Register_HydHIL();
-    BrakeHydSys_Register_PresDistrib();
-    BrakeHydSys_Register_HydESP();
+    Brake_Register();
 
-    Brake_Register_Overrun();
-    Brake_Register_OverrunFric();
-    BrakeHydSys_Register_TrPresDistrib();
-
-
-
-    PTControl_Register_Generic();
-    PTControlOSM_Register_Generic();
-    PTControl_Register_Micro();
-    PTControl_Register_Parallel_P1();
-    PTControl_Register_Parallel_P2();
-    PTControl_Register_AxleSplit();
-    PTControl_Register_BEV();
-    PTControl_Register_Serial();
-    PTControl_Register_PowerSplit();
-
-    PowerTrain_Register_Generic();
-    PowerTrain_Register_Parallel();
-    PowerTrain_Register_AxleSplit();
-    PowerTrain_Register_Serial();
-    PowerTrain_Register_Electric();
-    PowerTrain_Register_PowerSplit();
-    PowerTrain_Register_OpenXWD();
-    PowerTrain_Register_GT();
-
-    /* Calls for registering additional Cruise interfaces
-       should be placed here and executed _before_ invoking
-       PowerTrain_Register_AVL_Cruise()! */
-    PowerTrain_Register_AVL_Cruise();
-
-
-    Engine_Register_Linear();
-    Engine_Register_Mapping();
-    Engine_Register_DVA();
-    Engine_Register_Sherpa();
-    EngineCU_Register_Basic();
-
-    MotorCU_Register_Basic();
-    Motor_Register_Starter();
-    Motor_Register_Mapping();
-
-    DriveLine_Register_GenFront();
-    DriveLine_Register_GenRear();
-    DriveLine_Register_Gen2p2Front();
-    DriveLine_Register_Gen2p2Rear();
-    DriveLine_Register_Gen4WD();
-    DriveLine_Register_GenAxle();
-
-    PTGenCpl_Register_Visco();
-    PTGenCpl_Register_Locked();
-    PTGenCpl_Register_TrqSensing();
-    PTGenCpl_Register_DVA_Locked();
-    PTGenCpl_Register_TrqVec();
-
-
-    TransmCU_Register_Automatic();
-    TransmCU_Register_Auto_Conv();
-    TransmCU_Register_Auto_AMT();
-    TransmCU_Register_Auto_Conv_AMT();
-    TransmCU_Register_CVT();
-    TransmCU_Register_DCT();
-
-    Clutch_Register_Manual();
-    Clutch_Register_Converter();
-    Clutch_Register_DVA();
-    Clutch_Register_DMF();
-    Clutch_Register_Open();
-    Clutch_Register_Closed();
-
-    GearBox_Register_Manual();
-    GearBox_Register_DVA();
-    GearBox_Register_Automatic();
-    GearBox_Register_Auto_Conv();
-    GearBox_Register_Auto_AMT();
-    GearBox_Register_CVT();
-    GearBox_Register_DCT();
-    GearBox_Register_NoGearBox();
-
-    Battery_Register_Chen();
-    BatteryCU_Register_LV();
-    BatteryCU_Register_LV_HV1();
-    PowerSupply_Register_LV();
-    PowerSupply_Register_LV_HV1();
-    PowerSupply_Register_LV_HV1_HV2();
+    PowerTrain_Register();
 
     VC_Register_AccelCtrl   ();
     VC_Register_GenLatCtrl  ();
@@ -290,6 +195,7 @@ Vhcl_Register (void)
     VhclOperator_Register_IPGOperator();
 
     TrfFollow_Register ();
+    TrfLaneChange_Register ();
 
     return 0;
 }

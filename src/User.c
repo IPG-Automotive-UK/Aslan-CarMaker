@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-**  CarMaker - Version 9.1
+**  CarMaker - Version 10.0
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH

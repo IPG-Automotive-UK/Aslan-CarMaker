@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-**  CarMaker - Version 9.1
+**  CarMaker - Version 10.0
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -99,6 +99,8 @@
 #include <Vehicle/Sensor_CameraRSI.h>
 #include <Vehicle/Sensor_Camera.h>
 #include <Vehicle/Sensor_ObjectByLane.h>
+#include <Vehicle/Sensor_Assembly.h>
+
 #  include <Car/Brake.h>
 #  include <Car/Trailer_Brake.h>
 
@@ -116,6 +118,7 @@
 #if defined(LABCAR)
 # include <LABCAR.h>
 #endif
+#include "FMUQueue_IF.h"
 
 #include <SimNet.h>
 
@@ -296,7 +299,8 @@ App_Init (void)
     LidarRSI_Init ();
     ObjByLane_Init();
     CameraSensor_Init ();
-    Surrounding_Init ();
+    CameraRSI_Init();
+    SensorAssembly_Init();
 #if defined(CM_HIL)
     FST_Init(SimCore.TestRig.ECUParam.Inf);
 #endif
@@ -483,6 +487,24 @@ App_TestRun_Start (void *arg)
 	goto ErrorReturn;
     }
 
+    /* SimCore_GPUSensor_New() has to be called before Sensor*New() functions */
+    if (SimCore_GPUSensor_New() < 0) {
+	rv = -43;
+	goto ErrorReturn;
+    }
+
+    /* SensorAssembly_New() has to be called before Sensor*New() functions */
+    if (SensorAssembly_New() < 0) {
+        rv = -44;
+        goto ErrorReturn;
+    }
+
+    /* Surrounding_New() has to be called before any module (Radar, Camera, ...)
+       calls the Surrounding_Register() function */
+    if (Surrounding_New() < 0) {
+        rv = -42;
+        goto ErrorReturn;
+    }
     if (InertialSensor_New() < 0) {
 	rv = -10;
 	goto ErrorReturn;
@@ -751,10 +773,8 @@ App_TestRun_Calc (double dt)
 	rv = -2;
     SimCore_TCPU_TakeTS(&SimCore.TS.DrivMan);
 
-    if (SimCore.State == SCState_Simulate) {
-	if (Traffic_Calc(dt) < 0)
-	    rv = -5;
-    }
+    if (Traffic_Calc(dt) < 0)
+        rv = -5;
     if (User_Traffic_Calc(dt) < 0)
 	rv = -5;
 
@@ -770,7 +790,7 @@ App_TestRun_Calc (double dt)
 	rv = -6;
 
     if (Traffic_Lighting_Calc(dt) < 0)
-	rv = -6;
+	rv = -5;
     
 #if defined(LABCAR)
     LCO_Write(DVA_VC);
@@ -836,6 +856,8 @@ App_TestRun_Calc (double dt)
         rv = -37;
     if (CameraSensor_Calc(dt) < 0)
 	rv = -40;
+    if (CameraRSI_Calc(dt) < 0)
+	rv = -41;
 
     SimCore_TCPU_TakeTS(&SimCore.TS.Sensors);
 
@@ -879,7 +901,7 @@ App_TestRun_End (void *arg)
 	Vhcl_Snapshot_Export2Inf();
 
     User_TestRun_End ();
-
+    CM_XCP_TestRun_End ();
     ADASRP_StopClient ();
 
     Vhcl_Delete    (1);
@@ -993,6 +1015,8 @@ App_Cleanup (void)
     RadarRSILeg_Cleanup();
     LidarRSI_Cleanup ();
     CameraSensor_Cleanup ();
+    CameraSensor_Delete();
+    CameraRSI_Cleanup();
     Surrounding_Cleanup ();
     BdyFrame_CleanUp  ();
     Traffic_Cleanup ();
@@ -1004,6 +1028,7 @@ App_Cleanup (void)
     SimCore_Cleanup ();
     LogCleanup ();
     CMTh_Cleanup ();
+    SensorAssembly_Cleanup();
 
     AposPoll (0.0);
     AposExit ();
@@ -1128,6 +1153,10 @@ MainThread_BeginCycle (unsigned long long CycleNo64)
     if (LCO_SendRecv() <= 0)
 	return 1;
 #endif
+    FMUQ_Recv();
+
+    SimNet_WaitForSync();
+
     /*** wait until cycle time passed */
     if ((DeltaT=SimCore_WaitForNextLoop(CycleNo64)) <= 0)
 	return 1;

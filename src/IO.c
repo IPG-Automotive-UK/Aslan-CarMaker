@@ -1,6 +1,6 @@
 /*
 ******************************************************************************
-**  CarMaker - Version 9.1
+**  CarMaker - Version 10.0
 **  Vehicle Dynamics Simulation Toolkit
 **
 **  Copyright (C)   IPG Automotive GmbH
@@ -47,6 +47,7 @@
 #include <CarMaker.h>
 
 #include <mio.h>
+#include <ioconf.h>
 #include <can_interface.h>
 #include <FailSafeTester.h>
 #if !defined(LABCAR)
@@ -246,6 +247,9 @@ IO_Init (void)
 {
     Log("I/O Configuration: %s\n", IO_ListNames(NULL, 1));
 
+    if (IOConf_Init() < 0)
+            return -1;
+
     /* hardware configuration "none" */
     if (IO_None)
 	return 0;
@@ -312,6 +316,8 @@ IO_Init_Finalize (void)
 	if (CANIf_Init_Finalize() < 0)
 	    return -1;
     }
+
+
     if (!IO_None) {
 #if !defined(LABCAR)
 	if (RBS_Start())
@@ -339,6 +345,7 @@ IO_Param_Get (tInfos *inf)
 
     /* ignition off */
     SetKl15 (0);
+    IOConf_Param_Get();
 
     if (IO_None)
     	return 0;
@@ -383,7 +390,7 @@ IO_In (unsigned CycleNo)
 
     IO.DeltaT = SimCore.DeltaT;
     IO.T      = TimeGlobal;
-
+    IOConf_In(CycleNo);
     if (IO_None)
 	return;
 
@@ -421,6 +428,7 @@ IO_In (unsigned CycleNo)
 void
 IO_Out (unsigned CycleNo)
 {
+    IOConf_Out(CycleNo);
     if (IO_None)
 	return;
 

@@ -3,21 +3,10 @@ Integration of CarMaker with project ASLAN, open-source autonomous software for 
 
 ## Requirements
 ### Supported
-- CarMaker 9.1
+- CarMaker 10.0
 - Ubuntu 18.04 LTS
 - ROS 1 Melodic [ros-melodic-desktop-full](http://wiki.ros.org/melodic/Installation/Ubuntu)
 - Catkin Command Line Tools [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html)
-
-### Prospective
-
-- CarMaker 9.X.X
-- Ubuntu 16.04 LTS
-- ROS 1 Kinetic [ros-kinetic-desktop-full](http://wiki.ros.org/kinetic/Installation/Ubuntu)
-
-Any CarMaker 9 version can be used with slight modifications to the start and build scripts. These are [documented below](#change-carmaker-version-optional).
-
-For ROS Kinetic and Ubuntu 16.04, the [Master branch](https://github.com/project-aslan/Aslan/tree/master) of Project Aslan should be used instead of the melodic branch.
-
 
 ## Installation
 ### ROS
@@ -44,25 +33,26 @@ For ROS Kinetic and Ubuntu 16.04, the [Master branch](https://github.com/project
 ### CarMaker
 The CarMaker installation files can be found in the [IPG Client Area](https://ipg-automotive.com/support/client-area/installation-files/). The Client Area requires that the user have a registered account on the system, which should be straightforward to create.
 
-Select the appropriate version of CarMaker that you want to install. Then expand the "Office" panel and download the Linux release of CarMaker, e.g. this project was built for CarMaker 9.1, so the corresponding archive would be `CD-CarMakerOffice-linux-9.1.zip`.
+Select the appropriate version of CarMaker that you want to install. Then expand the "Office" panel and download the Linux release of CarMaker, e.g. this project was built for CarMaker 10.0, so the corresponding archive would be `CD-CarMakerOffice-linux-10.0.zip`.
 
 The archive constains the CarMaker installation files. Follow the installation instructions that can be found in the `InstallationGuide.pdf` inside the archive.
 
 ### Aslan-CarMaker
 #### Project Directory Setup
-The Aslan-CarMaker link is a complete CarMaker 9.1 project. IPG highly recommends that you have a separate dedicated directory for CarMaker projects with specific subdirectories for every major release of CarMaker. An example project structure in your Home directory would thus look like:
+The Aslan-CarMaker link is a complete CarMaker 10.0 project. IPG highly recommends that you have a separate dedicated directory for CarMaker projects with specific subdirectories for every major release of CarMaker. An example project structure in your Home directory would thus look like:
 
     Home
     └── CM_Projects     # Root of CarMaker projects
         ├── CM_7        # CarMaker 7 projects
         ├── CM_8        # CarMaker 8 projects
-        └── CM_9        # CarMaker 9 projects
+        ├── CM_9        # CarMaker 9 projects
+        └── CM_10       # CarMaker 10 projects
 
 #### Clone Project Repository
-Open a terminal and go to the project folder where you would store your CarMaker 9 projects, e.g.:
+Open a terminal and go to the project folder where you would store your CarMaker 10 projects, e.g.:
 
 ```
-cd ~/CM_Projects/CM_9
+cd ~/CM_Projects/CM_10
 ```
 
 For convenience, Project Aslan is included as a submodule of this repository. To ensure that all project components are in the correct place where the build scripts expect them, clone the Aslan-CarMaker git along with its submodules:
@@ -72,11 +62,11 @@ git clone --branch melodic --recurse-submodules https://github.com/IPG-Automotiv
 ```
 
 #### Change CarMaker Version (optional)
-To compile and use a different CarMaker 9 version other than 9.1, several changes to the code need to be made. These changes are described here and must be made before the project is built. All paths below are relative to the project root folder.
+To compile and use a different CarMaker 10 version other than 10.0, several changes to the code need to be made. These changes are described here and must be made before the project is built. All paths below are relative to the project root folder.
 
-1. CMStart.sh - the command ```/opt/ipg/bin/CM-9.1``` (line 7) needs to point to the main CarMaker executable that you want to use. Alter the name and location of the executable as appropriate.
-2. src/Makefile - the command ```include /opt/ipg/carmaker/linux64-9.1/include/MakeDefs.linux64``` (line 16) needs to point to the correct MakeDefs file for the desired CarMaker version. Alter the CarMaker source directory path as appropriate.
-3. ros/ros1_ws/src/cmnode/CMakeLists.txt - The two strings that set the CarMaker version ```set(CARMAKER_VER 9.1)``` and ```set(CARMAKER_NUMVER 90100)``` (line 18-19) need to be appropriately altered to the CarMaker version of choice. The format for ```CARMAKER_NUMVER``` is ```<nDigitsMajor>.<2DigitsMinor>.<2DigitsPatch>``` where the ```MAJOR.MINOR.PATCH``` is the actual CarMaker version.
+1. CMStart.sh - the command ```/opt/ipg/bin/CM-10.0``` (line 7) needs to point to the main CarMaker executable that you want to use. Alter the name and location of the executable as appropriate.
+2. src/Makefile - the command ```include /opt/ipg/carmaker/linux64-10.0/include/MakeDefs.linux64``` (line 16) needs to point to the correct MakeDefs file for the desired CarMaker version. Alter the CarMaker source directory path as appropriate.
+3. ros/ros1_ws/src/cmnode/CMakeLists.txt - The two strings that set the CarMaker version ```set(CARMAKER_VER 10.0)``` and ```set(CARMAKER_NUMVER 100000)``` (line 18-19) need to be appropriately altered to the CarMaker version of choice. The format for ```CARMAKER_NUMVER``` is ```<nDigitsMajor>.<2DigitsMinor>.<2DigitsPatch>``` where the ```MAJOR.MINOR.PATCH``` is the actual CarMaker version.
 
 #### Build Project
 A build script `build_cmrosif.sh` is included in this project that must be run before use. It can be found in the top directory of the project. Ensure that the appropriate permission has been given to the script to run as an executable, as well as the `ros/ros1_ws/build.sh` that builds the CarMaker node itself.
