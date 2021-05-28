@@ -662,21 +662,17 @@ extern "C" {
             ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.Param.%d.Type", ref);
             str = iGetStrOpt(Inf_Vhcl, sbuf, "");
-            LOG("Comparing L=%s to R=%s", str, "LidarRSI");
             if (!strcmp(str, "LidarRSI")) {
                 /* If the LidarRSI sensor is found, get its index and exit loop */
                 idxP = ref;
                 sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
                 idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
-                LOG("LidarRSI found at S=%d, C=%d, P=%d", idxS, idxC, idxP);
                 break;
             }
         }
         if (idxP != -1) {
             sprintf(sbuf, "Sensor.%d.Active", idxS);
             CMNode.Sensor.LidarRSI.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
-            LOG("LidarRSI Sensor Active: %s", sbuf);
-            LOG("LidarRSI Sensor Active=%d", CMNode.Sensor.LidarRSI.Active);
             sprintf(sbuf, "Sensor.%d.pos", idxS);
             CMNode.Sensor.LidarRSI.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
             sprintf(sbuf, "Sensor.%d.rot", idxS);
