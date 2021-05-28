@@ -47,9 +47,12 @@
 /* ROS CM */
 #include "cmrosutils/CMRosUtils.h"      /* Node independent templates, ...*/
 #include "cmrosutils/CMRosIF_Utils.h"   /* Only for CarMaker ROS Node!!! Functions are located in library for CarMaker ROS Interface */
+#include "rsds-client-camera.h"         /* RSDS Camera RSI client */
 
 /* ROS */
 #include "sensor_msgs/PointCloud2.h"                    /* ROS PointCloud2 for sensor inputs */
+#include "sensor_msgs/Image.h"                          /* ROS Image for camera sensor inputs */
+#include "sensor_msgs/CameraInfo.h"                     /* ROS CameraInfo for camera metadata */
 #include "sensor_msgs/NavSatFix.h"                      /* ROS Navigation Satellite fix */
 #include "geometry_msgs/TwistStamped.h"                 /* ROS Twist command */
 #include "tf2/LinearMath/Quaternion.h"                  /* Ros TF2 quaternion */
@@ -112,6 +115,14 @@ static struct {
             tRosIF_TpcPub<sensor_msgs::NavSatFix> GPS;
             tRosIF_TpcPub<sensor_msgs::PointCloud2> LidarRSI;
             tRosIF_TpcPub<sensor_msgs::PointCloud2> RadarRSI;
+            tRosIF_TpcPub<sensor_msgs::Image> CameraStereoL;
+            tRosIF_TpcPub<sensor_msgs::Image> CameraStereoR;
+            tRosIF_TpcPub<sensor_msgs::CameraInfo> CameraInfoL;
+            tRosIF_TpcPub<sensor_msgs::CameraInfo> CameraInfoR;
+            tRosIF_TpcPub<sensor_msgs::Image> CameraRGB;
+            tRosIF_TpcPub<sensor_msgs::CameraInfo> CameraInfoRGB;
+            tRosIF_TpcPub<sensor_msgs::Image> CameraMono;
+            tRosIF_TpcPub<sensor_msgs::CameraInfo> CameraMonoInfo;
             tRosIF_TpcPub<geometry_msgs::TwistStamped> Velocity;
 
             /*!< CarMaker can be working as ROS Time Server providing simulation time
@@ -174,6 +185,36 @@ static struct {
             int             OutputType;             /*!< 0:Cartesian 1:Spherical 2:VRx */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } RadarRSI;
+
+        struct {
+            int             Active;                 /*!< Presence of active CameraRSI sensors */
+            double*         pos;                    /*!< Mounting position on vehicle frame */
+            double*         rot;                    /*!< Mounting rotation on vehicle frame */
+            int             nCycleOffset;
+            int             UpdRate;
+            char*           OutputFormat;           /*!< Format of the output image data */
+            geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
+        } CameraStereoL;
+
+        struct {
+            int             Active;                 /*!< Presence of active CameraRSI sensors */
+            double*         pos;                    /*!< Mounting position on vehicle frame */
+            double*         rot;                    /*!< Mounting rotation on vehicle frame */
+            int             nCycleOffset;
+            int             UpdRate;
+            char*           OutputFormat;           /*!< Format of the output image data */
+            geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
+        } CameraStereoR;
+
+        struct {
+            int             Active;                 /*!< Presence of active CameraRSI sensors */
+            double*         pos;                    /*!< Mounting position on vehicle frame */
+            double*         rot;                    /*!< Mounting rotation on vehicle frame */
+            int             nCycleOffset;
+            int             UpdRate;
+            char*           OutputFormat;           /*!< Format of the output image data */
+            geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
+        } CameraMono;
     } Sensor; /*!< Sensor parameters */
 
     struct {
@@ -182,8 +223,6 @@ static struct {
     } Global; /*!< Global simulation properties */
 
 } CMNode;
-
-
 
 /*!
 * Description:
@@ -364,6 +403,54 @@ extern "C" {
         CMNode.Topics.Pub.RadarRSI.Pub      = node->advertise<sensor_msgs::PointCloud2>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
         CMNode.Topics.Pub.RadarRSI.Job      = CMCRJob_Create("RADAR");
 
+        /* Stereo Camera RSI Left pub */
+        strcpy(sbuf, "/zed/zed_node/left/image_rect_color");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraStereoL.Pub = node->advertise<sensor_msgs::Image>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraStereoL.Job = CMCRJob_Create("CAMERA_L");
+
+        /* Stereo Camera RSI Left Info pub */
+        strcpy(sbuf, "/zed/zed_node/left/camera_info");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraInfoL.Pub   = node->advertise<sensor_msgs::CameraInfo>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraInfoL.Job   = CMCRJob_Create("CAMERA_INFO_L");
+
+        /* Stereo Camera RSI Right pub */
+        strcpy(sbuf, "/zed/zed_node/right/image_rect_color");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraStereoR.Pub = node->advertise<sensor_msgs::Image>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraStereoR.Job = CMCRJob_Create("CAMERA_R");
+
+        /* Stereo Camera RSI Right Info pub */
+        strcpy(sbuf, "/zed/zed_node/right/camera_info");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraInfoR.Pub   = node->advertise<sensor_msgs::CameraInfo>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraInfoR.Job   = CMCRJob_Create("CAMERA_INFO_R");
+
+        /* Stereo Camera RSI RGB pub */
+        strcpy(sbuf, "/zed/zed_node/rgb/image_rect_color");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraRGB.Pub     = node->advertise<sensor_msgs::Image>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraRGB.Job     = CMCRJob_Create("CAMERA_RGB");
+
+        /* Stereo Camera RSI RGB Info pub */
+        strcpy(sbuf, "/zed/zed_node/rgb/camera_info");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraInfoRGB.Pub = node->advertise<sensor_msgs::CameraInfo>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraInfoRGB.Job = CMCRJob_Create("CAMERA_INFO_RGB");
+
+        /* Mono Camera RSI pub */
+        strcpy(sbuf, "/pylon_camera/image_rect");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraMono.Pub    = node->advertise<sensor_msgs::Image>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraMono.Job    = CMCRJob_Create("CAMERA_M");
+
+        /* Mono Camera RSI Info pub */
+        strcpy(sbuf, "/pylon_camera/image_info");
+        LOG("  -> Publish '%s'", sbuf);
+        CMNode.Topics.Pub.CameraMonoInfo.Pub = node->advertise<sensor_msgs::CameraInfo>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
+        CMNode.Topics.Pub.CameraMonoInfo.Job = CMCRJob_Create("CAMERA_INFO_M");
+
         /* Vehicle Velocity pub */
         strcpy(sbuf, "/current_velocity");
         LOG("  -> Publish '%s'", sbuf);
@@ -498,7 +585,6 @@ extern "C" {
         CMNode.Topics.Pub.RadarRSI.Msg.is_dense = true;
 
         /* Services */
-
 
         /* Print general information after everything is done */
         LOG("Initialisation of ROS Node finished!");
@@ -662,21 +748,17 @@ extern "C" {
             ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.Param.%d.Type", ref);
             str = iGetStrOpt(Inf_Vhcl, sbuf, "");
-            LOG("Comparing L=%s to R=%s", str, "LidarRSI");
             if (!strcmp(str, "LidarRSI")) {
                 /* If the LidarRSI sensor is found, get its index and exit loop */
                 idxP = ref;
                 sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
                 idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
-                LOG("LidarRSI found at S=%d, C=%d, P=%d", idxS, idxC, idxP);
                 break;
             }
         }
         if (idxP != -1) {
             sprintf(sbuf, "Sensor.%d.Active", idxS);
             CMNode.Sensor.LidarRSI.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
-            LOG("LidarRSI Sensor Active: %s", sbuf);
-            LOG("LidarRSI Sensor Active=%d", CMNode.Sensor.LidarRSI.Active);
             sprintf(sbuf, "Sensor.%d.pos", idxS);
             CMNode.Sensor.LidarRSI.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
             sprintf(sbuf, "Sensor.%d.rot", idxS);
@@ -687,52 +769,53 @@ extern "C" {
             CMNode.Sensor.LidarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.Param.%d.BeamsFName", idxP);
             CMNode.Sensor.LidarRSI.BeamFName                = iGetStrOpt(Inf_Vhcl, sbuf, "LidarRSI_Default");
+
+            /* Read the LiDAR RSI Map Infofile */
+            const char *FName_Lidar;
+            std::string DName_Lidar, EName_Lidar;                       /* These will hold the potential pathnames to the Lidar map file in the project Data and in IPG Examples */
+            FName_Lidar = CMNode.Sensor.LidarRSI.BeamFName;             /* get the filename of the Infofile */
+
+            DName_Lidar.append("Data/Sensor/");
+            DName_Lidar.append(FName_Lidar);
+
+            EName_Lidar.append(SimCore.System.ProdDir);
+            EName_Lidar.append("/");
+            EName_Lidar.append(DName_Lidar);
+
+            Inf_Lidar = InfoNew();
+            rStat = iRead2(&err, Inf_Lidar, DName_Lidar.c_str(), "Lidar_Map");      /* Attempt to read file in project Data */
+
+            if (rStat) {
+                /* First try failed. Attempt to read file in IPG Examples */
+                rStat = iRead2(&err, Inf_Lidar, EName_Lidar.c_str(), "Lidar_Map");
+
+                if (rStat) {
+                    /* Both locations failed. Could not locate the LiDAR map file! */
+                    LogErrF(EC_Sim, "Could not locate LiDAR beam data file with name %s", FName_Lidar);
+                } else {
+                    LOG("Reading LiDAR beam data from file: %s", EName_Lidar.c_str());
+                }
+            } else {
+                LOG("Reading LiDAR beam data from file: %s", DName_Lidar.c_str());
+            }
+
+            CMNode.Sensor.LidarRSI.Beams                    = iGetTableOpt2(Inf_Lidar, "Beams", def6c, 6, &CMNode.Sensor.LidarRSI.nBeams);
+
+            /* Build the LIDAR RSI frame transformation */
+            CMNode.Sensor.LidarRSI.TF.header.frame_id       = "Fr1";
+            CMNode.Sensor.LidarRSI.TF.child_frame_id        = "Fr_LidarRSI";
+            q.setRPY(CMNode.Sensor.LidarRSI.rot[0] * DEG_to_RAD, CMNode.Sensor.LidarRSI.rot[1] * DEG_to_RAD, CMNode.Sensor.LidarRSI.rot[2] * DEG_to_RAD);
+            CMNode.Sensor.LidarRSI.TF.transform.rotation.x  = q.x();
+            CMNode.Sensor.LidarRSI.TF.transform.rotation.y  = q.y();
+            CMNode.Sensor.LidarRSI.TF.transform.rotation.z  = q.z();
+            CMNode.Sensor.LidarRSI.TF.transform.rotation.w  = q.w();
+            CMNode.Sensor.LidarRSI.TF.transform.translation.x = CMNode.Sensor.LidarRSI.pos[0];
+            CMNode.Sensor.LidarRSI.TF.transform.translation.y = CMNode.Sensor.LidarRSI.pos[1];
+            CMNode.Sensor.LidarRSI.TF.transform.translation.z = CMNode.Sensor.LidarRSI.pos[2];
         } else {
             CMNode.Sensor.LidarRSI.Active                   = 0;
         }
-
-        CMNode.Sensor.LidarRSI.TF.header.frame_id       = "Fr1";
-        CMNode.Sensor.LidarRSI.TF.child_frame_id        = "Fr_LidarRSI";
-        q.setRPY(CMNode.Sensor.LidarRSI.rot[0] * DEG_to_RAD, CMNode.Sensor.LidarRSI.rot[1] * DEG_to_RAD, CMNode.Sensor.LidarRSI.rot[2] * DEG_to_RAD);
-        CMNode.Sensor.LidarRSI.TF.transform.rotation.x  = q.x();
-        CMNode.Sensor.LidarRSI.TF.transform.rotation.y  = q.y();
-        CMNode.Sensor.LidarRSI.TF.transform.rotation.z  = q.z();
-        CMNode.Sensor.LidarRSI.TF.transform.rotation.w  = q.w();
-        CMNode.Sensor.LidarRSI.TF.transform.translation.x = CMNode.Sensor.LidarRSI.pos[0];
-        CMNode.Sensor.LidarRSI.TF.transform.translation.y = CMNode.Sensor.LidarRSI.pos[1];
-        CMNode.Sensor.LidarRSI.TF.transform.translation.z = CMNode.Sensor.LidarRSI.pos[2];
-
-        /* Read the LiDAR RSI Map Infofile */
-        const char *FName_Lidar;
-        std::string DName_Lidar, EName_Lidar;                       /* These will hold the potential pathnames to the Lidar map file in the project Data and in IPG Examples */
-        FName_Lidar = CMNode.Sensor.LidarRSI.BeamFName;             /* get the filename of the Infofile */
-
-        DName_Lidar.append("Data/Sensor/");
-        DName_Lidar.append(FName_Lidar);
-
-        EName_Lidar.append(SimCore.System.ProdDir);
-        EName_Lidar.append("/");
-        EName_Lidar.append(DName_Lidar);
-
-        Inf_Lidar = InfoNew();
-        rStat = iRead2(&err, Inf_Lidar, DName_Lidar.c_str(), "Lidar_Map");      /* Attempt to read file in project Data */
-
-        if (rStat) {
-            /* First try failed. Attempt to read file in IPG Examples */
-            rStat = iRead2(&err, Inf_Lidar, EName_Lidar.c_str(), "Lidar_Map");
-
-            if (rStat) {
-                /* Both locations failed. Could not locate the LiDAR map file! */
-                LogErrF(EC_Sim, "Could not locate LiDAR beam data file with name %s", FName_Lidar);
-            } else {
-                LOG("Reading LiDAR beam data from file: %s", EName_Lidar.c_str());
-            }
-        } else {
-            LOG("Reading LiDAR beam data from file: %s", DName_Lidar.c_str());
-        }
-
-        CMNode.Sensor.LidarRSI.Beams                    = iGetTableOpt2(Inf_Lidar, "Beams", def6c, 6, &CMNode.Sensor.LidarRSI.nBeams);
-
+        
         /* RADAR RSI */
         idxP = -1;
         for (idxS = 0; idxS < N; idxS++) {
@@ -761,20 +844,121 @@ extern "C" {
             CMNode.Sensor.RadarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.Param.%d.OutputType", idxP);
             CMNode.Sensor.RadarRSI.OutputType               = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+
+            /* Build the RADAR RSI frame transformation */
+            CMNode.Sensor.RadarRSI.TF.header.frame_id       = "Fr1";
+            CMNode.Sensor.RadarRSI.TF.child_frame_id        = "Fr_RadarRSI";
+            q.setRPY(CMNode.Sensor.RadarRSI.rot[0] * DEG_to_RAD, CMNode.Sensor.RadarRSI.rot[1] * DEG_to_RAD, CMNode.Sensor.RadarRSI.rot[2] * DEG_to_RAD);
+            CMNode.Sensor.RadarRSI.TF.transform.rotation.x  = q.x();
+            CMNode.Sensor.RadarRSI.TF.transform.rotation.y  = q.y();
+            CMNode.Sensor.RadarRSI.TF.transform.rotation.z  = q.z();
+            CMNode.Sensor.RadarRSI.TF.transform.rotation.w  = q.w();
+            CMNode.Sensor.RadarRSI.TF.transform.translation.x = CMNode.Sensor.RadarRSI.pos[0];
+            CMNode.Sensor.RadarRSI.TF.transform.translation.y = CMNode.Sensor.RadarRSI.pos[1];
+            CMNode.Sensor.RadarRSI.TF.transform.translation.z = CMNode.Sensor.RadarRSI.pos[2];
         } else {
             CMNode.Sensor.RadarRSI.Active                   = 0;
         }
 
-        CMNode.Sensor.RadarRSI.TF.header.frame_id       = "Fr1";
-        CMNode.Sensor.RadarRSI.TF.child_frame_id        = "Fr_RadarRSI";
-        q.setRPY(CMNode.Sensor.RadarRSI.rot[0] * DEG_to_RAD, CMNode.Sensor.RadarRSI.rot[1] * DEG_to_RAD, CMNode.Sensor.RadarRSI.rot[2] * DEG_to_RAD);
-        CMNode.Sensor.RadarRSI.TF.transform.rotation.x  = q.x();
-        CMNode.Sensor.RadarRSI.TF.transform.rotation.y  = q.y();
-        CMNode.Sensor.RadarRSI.TF.transform.rotation.z  = q.z();
-        CMNode.Sensor.RadarRSI.TF.transform.rotation.w  = q.w();
-        CMNode.Sensor.RadarRSI.TF.transform.translation.x = CMNode.Sensor.RadarRSI.pos[0];
-        CMNode.Sensor.RadarRSI.TF.transform.translation.y = CMNode.Sensor.RadarRSI.pos[1];
-        CMNode.Sensor.RadarRSI.TF.transform.translation.z = CMNode.Sensor.RadarRSI.pos[2];
+        /* CameraStereoL */
+        idxP = -1;
+        for (idxS = 0; idxS < N; idxS++) {
+            sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
+            ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.Type", ref);
+            str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            if (!strcmp(str, "CameraRSI")) {
+                /* If the CameraRSI sensor is found, check the name */
+                sprintf(sbuf, "Sensor.%d.name", idxS);
+                str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+                // TODO: parameterise this name
+                if (!strcmp(str, "ZED_L")) {
+                    /* If the matching name is found, get its index and exit loop */
+                    idxP = ref;
+                    sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
+                    idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+                    break;
+                }
+            }
+        }
+        if (idxP != -1) {
+            sprintf(sbuf, "Sensor.%d.Active", idxS);
+            CMNode.Sensor.CameraStereoL.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.%d.pos", idxS);
+            CMNode.Sensor.CameraStereoL.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "Sensor.%d.rot", idxS);
+            CMNode.Sensor.CameraStereoL.rot                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "SensorCluster.%d.CycleTime", idxC);
+            CMNode.Sensor.CameraStereoL.UpdRate                  = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            sprintf(sbuf, "SensorCluster.%d.CycleOffset", idxC);
+            CMNode.Sensor.CameraStereoL.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.OutputFormat", idxP);
+            CMNode.Sensor.CameraStereoL.OutputFormat             = iGetStrOpt(Inf_Vhcl, sbuf, "");
+        
+            /* Build the CameraStereoL frame transformation */
+            CMNode.Sensor.CameraStereoL.TF.header.frame_id       = "Fr1";
+            CMNode.Sensor.CameraStereoL.TF.child_frame_id        = "Fr_CameraStereoL";
+            q.setRPY(CMNode.Sensor.CameraStereoL.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraStereoL.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraStereoL.rot[2] * DEG_to_RAD);
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.x  = q.x();
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.y  = q.y();
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.z  = q.z();
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.w  = q.w();
+            CMNode.Sensor.CameraStereoL.TF.transform.translation.x = CMNode.Sensor.CameraStereoL.pos[0];
+            CMNode.Sensor.CameraStereoL.TF.transform.translation.y = CMNode.Sensor.CameraStereoL.pos[1];
+            CMNode.Sensor.CameraStereoL.TF.transform.translation.z = CMNode.Sensor.CameraStereoL.pos[2];
+        } else {
+            CMNode.Sensor.CameraStereoL.Active                   = 0;
+        }
+
+        /* CameraStereoR */
+        idxP = -1;
+        for (idxS = 0; idxS < N; idxS++) {
+            sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
+            ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.Type", ref);
+            str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            if (!strcmp(str, "CameraRSI")) {
+                /* If the CameraRSI sensor is found, check the name */
+                sprintf(sbuf, "Sensor.%d.name", idxS);
+                str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+                // TODO: parameterise this name
+                if (!strcmp(str, "ZED_R")) {
+                    /* If the matching name is found, get its index and exit loop */
+                    idxP = ref;
+                    sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
+                    idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+                    break;
+                }
+            }
+        }
+        if (idxP != -1) {
+            sprintf(sbuf, "Sensor.%d.Active", idxS);
+            CMNode.Sensor.CameraStereoR.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.%d.pos", idxS);
+            CMNode.Sensor.CameraStereoR.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "Sensor.%d.rot", idxS);
+            CMNode.Sensor.CameraStereoR.rot                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "SensorCluster.%d.CycleTime", idxC);
+            CMNode.Sensor.CameraStereoR.UpdRate                  = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            sprintf(sbuf, "SensorCluster.%d.CycleOffset", idxC);
+            CMNode.Sensor.CameraStereoR.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.OutputFormat", idxP);
+            CMNode.Sensor.CameraStereoR.OutputFormat             = iGetStrOpt(Inf_Vhcl, sbuf, "");
+        
+            /* Build the CameraStereoR frame transformation */
+            CMNode.Sensor.CameraStereoR.TF.header.frame_id       = "Fr1";
+            CMNode.Sensor.CameraStereoR.TF.child_frame_id        = "Fr_CameraStereoR";
+            q.setRPY(CMNode.Sensor.CameraStereoR.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraStereoR.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraStereoR.rot[2] * DEG_to_RAD);
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.x  = q.x();
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.y  = q.y();
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.z  = q.z();
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.w  = q.w();
+            CMNode.Sensor.CameraStereoR.TF.transform.translation.x = CMNode.Sensor.CameraStereoR.pos[0];
+            CMNode.Sensor.CameraStereoR.TF.transform.translation.y = CMNode.Sensor.CameraStereoR.pos[1];
+            CMNode.Sensor.CameraStereoR.TF.transform.translation.z = CMNode.Sensor.CameraStereoR.pos[2];
+        } else {
+            CMNode.Sensor.CameraStereoR.Active                   = 0;
+        }
 
         LOG("CarMaker ROS Node is enabled! Mode=%d", *pmode);
         LOG("  -> Node Name = %s", ros::this_node::getName().c_str());
@@ -833,6 +1017,54 @@ extern "C" {
         job         = CMNode.Topics.Pub.RadarRSI.Job;
         cycletime   = CMNode.Sensor.RadarRSI.UpdRate;
         cycleoff    = CMNode.Sensor.RadarRSI.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Stereo Camera RSI Left pub job */
+        job         = CMNode.Topics.Pub.CameraStereoL.Job;
+        cycletime   = CMNode.Sensor.CameraStereoL.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraStereoL.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Stereo Camera RSI Left Info pub job */
+        job         = CMNode.Topics.Pub.CameraInfoL.Job;
+        cycletime   = CMNode.Sensor.CameraStereoL.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraStereoL.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Stereo Camera RSI Right pub job */
+        job         = CMNode.Topics.Pub.CameraStereoR.Job;
+        cycletime   = CMNode.Sensor.CameraStereoR.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraStereoR.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Stereo Camera RSI Right Info pub job */
+        job         = CMNode.Topics.Pub.CameraInfoR.Job;
+        cycletime   = CMNode.Sensor.CameraStereoR.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraStereoR.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Stereo Camera RSI RGB pub job */
+        job         = CMNode.Topics.Pub.CameraRGB.Job;
+        cycletime   = CMNode.Sensor.CameraStereoL.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraStereoL.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Stereo Camera RSI RGB Info pub job */
+        job         = CMNode.Topics.Pub.CameraInfoRGB.Job;
+        cycletime   = CMNode.Sensor.CameraStereoL.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraStereoL.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Mono Camera RSI pub job */
+        job         = CMNode.Topics.Pub.CameraMono.Job;
+        cycletime   = CMNode.Sensor.CameraMono.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraMono.nCycleOffset+1;
+        CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
+
+        /* Mono Camera RSI Info pub job */
+        job         = CMNode.Topics.Pub.CameraMonoInfo.Job;
+        cycletime   = CMNode.Sensor.CameraMono.UpdRate;
+        cycleoff    = CMNode.Sensor.CameraMono.nCycleOffset+1;
         CMCRJob_Init(job, cycleoff, cycletime, CMCRJob_Mode_Ext);
 
         /* Vehicle Velocity pub job */
@@ -1170,6 +1402,209 @@ extern "C" {
             }
         }
 
+        /* Publish CameraStereoL/CameraRGB RSI data from CarMaker */
+        if (CMNode.Sensor.CameraStereoL.Active) {
+            /* CameraStereoL Image */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraStereoL.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraStereoL.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraStereoL.Msg.header.frame_id     = "Fr_CameraStereoL";
+                CMNode.Topics.Pub.CameraStereoL.Msg.header.stamp        = ros::Time(SimCore.Time);
+
+                // TODO: parameterise this
+                unsigned int cidx = 0;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraStereoL.Msg.height              = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraStereoL.Msg.width               = CData[cidx].ImgWidth;
+
+                /* Extract the image type */
+                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
+                    CMNode.Topics.Pub.CameraStereoL.Msg.encoding        = "rgb8";
+                    CMNode.Topics.Pub.CameraStereoL.Msg.is_bigendian    = true;
+                    CMNode.Topics.Pub.CameraStereoL.Msg.step            = CData[cidx].ImgWidth;
+                }
+
+                /* Create the output data binary blob */
+                CMNode.Topics.Pub.CameraStereoL.Msg.data.resize(CData[cidx].ImgLen);
+                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
+                    CMNode.Topics.Pub.CameraStereoL.Msg.data[ii] = CData[cidx].img[ii];
+                }
+            }
+
+            /* CameraStereoRGB Image */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraRGB.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraRGB.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraRGB.Msg.header.frame_id         = "Fr_CameraStereoL";
+                CMNode.Topics.Pub.CameraRGB.Msg.header.stamp            = ros::Time(SimCore.Time);
+
+                // TODO: parameterise this
+                unsigned int cidx = 0;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraRGB.Msg.height                  = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraRGB.Msg.width                   = CData[cidx].ImgWidth;
+
+                /* Extract the image type */
+                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
+                    CMNode.Topics.Pub.CameraRGB.Msg.encoding            = "rgb8";
+                    CMNode.Topics.Pub.CameraRGB.Msg.is_bigendian        = true;
+                    CMNode.Topics.Pub.CameraRGB.Msg.step                = CData[cidx].ImgWidth;
+                }
+
+                /* Create the output data binary blob */
+                CMNode.Topics.Pub.CameraRGB.Msg.data.resize(CData[cidx].ImgLen);
+                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
+                    CMNode.Topics.Pub.CameraRGB.Msg.data[ii] = CData[cidx].img[ii];
+                }
+            }
+
+            /* CameraStereoL Info */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraInfoL.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraInfoL.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraInfoL.Msg.header.frame_id       = "Fr_CameraStereoL";
+                CMNode.Topics.Pub.CameraInfoL.Msg.header.stamp          = ros::Time(SimCore.Time);
+
+                // TODO: parameterise this
+                unsigned int cidx = 0;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraInfoL.Msg.height                = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraInfoL.Msg.width                 = CData[cidx].ImgWidth;
+
+                /* Set the image distortion model */
+                // TODO: fill these with real data
+                CMNode.Topics.Pub.CameraInfoL.Msg.distortion_model      = "plump_bob";
+                CMNode.Topics.Pub.CameraInfoL.Msg.D                     = {0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoL.Msg.K                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoL.Msg.R                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoL.Msg.P                     = {1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0};
+
+                /* Set the subsampling values */
+                CMNode.Topics.Pub.CameraInfoL.Msg.binning_x             = 1;
+                CMNode.Topics.Pub.CameraInfoL.Msg.binning_y             = 1;
+
+                /* Set the region of interest */
+                CMNode.Topics.Pub.CameraInfoL.Msg.roi.x_offset          = 0;
+                CMNode.Topics.Pub.CameraInfoL.Msg.roi.y_offset          = 0;
+                CMNode.Topics.Pub.CameraInfoL.Msg.roi.height            = 0;
+                CMNode.Topics.Pub.CameraInfoL.Msg.roi.width             = 0;
+                CMNode.Topics.Pub.CameraInfoL.Msg.roi.do_rectify        = false;
+            }
+
+            /* CameraStereoRGB Info */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraInfoRGB.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraInfoRGB.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.header.frame_id     = "Fr_CameraStereoL";
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.header.stamp        = ros::Time(SimCore.Time);
+
+                // TODO: parameterise this
+                unsigned int cidx = 0;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.height              = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.width               = CData[cidx].ImgWidth;
+
+                /* Set the image distortion model */
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.distortion_model    = "plump_bob";
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.D = {0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.K = {1, 0, 1, 0, 1, 1, 0, 0, 1};
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.R = {1, 0, 0, 0, 1, 0, 0, 0, 1};
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.P = {1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0};
+
+                /* Set the subsampling values */
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.binning_x           = 1;
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.binning_y           = 1;
+
+                /* Set the region of interest */
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.roi.x_offset        = 0;
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.roi.y_offset        = 0;
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.roi.height          = 0;
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.roi.width           = 0;
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.roi.do_rectify      = false;
+            }
+        }
+
+        /* Publish CameraStereoR RSI data from CarMaker */
+        if (CMNode.Sensor.CameraStereoR.Active) {
+            /* Image Data */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraStereoR.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraStereoR.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraStereoR.Msg.header.frame_id     = "Fr_CameraStereoR";
+                CMNode.Topics.Pub.CameraStereoR.Msg.header.stamp        = ros::Time(SimCore.Time);
+
+                // TODO: parameterise this
+                unsigned int cidx = 1;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraStereoR.Msg.height              = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraStereoR.Msg.width               = CData[cidx].ImgWidth;
+
+                /* Extract the image type */
+                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
+                    CMNode.Topics.Pub.CameraStereoR.Msg.encoding        = "rgb8";
+                    CMNode.Topics.Pub.CameraStereoR.Msg.is_bigendian    = true;
+                    CMNode.Topics.Pub.CameraStereoR.Msg.step            = CData[cidx].ImgWidth;
+                }
+
+                /* Create the output data binary blob */
+                CMNode.Topics.Pub.CameraStereoR.Msg.data.resize(CData[cidx].ImgLen);
+                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
+                    CMNode.Topics.Pub.CameraStereoR.Msg.data[ii] = CData[cidx].img[ii];
+                }
+            }
+
+            /* Camera Info */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraInfoR.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraInfoR.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraInfoR.Msg.header.frame_id       = "Fr_CameraStereoR";
+                CMNode.Topics.Pub.CameraInfoR.Msg.header.stamp          = ros::Time(SimCore.Time);
+
+                // TODO: parameterise this
+                unsigned int cidx = 1;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraInfoR.Msg.height                = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraInfoR.Msg.width                 = CData[cidx].ImgWidth;
+
+                /* Set the image distortion model */
+                // TODO: fill these with real data
+                CMNode.Topics.Pub.CameraInfoR.Msg.distortion_model      = "plump_bob";
+                CMNode.Topics.Pub.CameraInfoR.Msg.D                     = {0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoR.Msg.K                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoR.Msg.R                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoR.Msg.P                     = {1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0};
+
+                /* Set the subsampling values */
+                CMNode.Topics.Pub.CameraInfoR.Msg.binning_x             = 1;
+                CMNode.Topics.Pub.CameraInfoR.Msg.binning_y             = 1;
+
+                /* Set the region of interest */
+                CMNode.Topics.Pub.CameraInfoR.Msg.roi.x_offset          = 0;
+                CMNode.Topics.Pub.CameraInfoR.Msg.roi.y_offset          = 0;
+                CMNode.Topics.Pub.CameraInfoR.Msg.roi.height            = 0;
+                CMNode.Topics.Pub.CameraInfoR.Msg.roi.width             = 0;
+                CMNode.Topics.Pub.CameraInfoR.Msg.roi.do_rectify        = false;
+            }
+        }
+
         /* Publish vehicle velocity data from CarMaker */
         if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.Velocity.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
             LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.Velocity.Job), CMCRJob_RVStr(rv));
@@ -1265,6 +1700,107 @@ extern "C" {
             /* Update the coordinate transformation between Fr1 and Fr_RadarRSI */
             CMNode.Sensor.RadarRSI.TF.header.stamp = ros::Time(SimCore.Time);
             CMNode.Global.TF_br->sendTransform(CMNode.Sensor.RadarRSI.TF);
+        }
+
+        /* Publish CameraStereoL/CameraRGB messages */
+        if (CMNode.Sensor.CameraStereoL.Active) {
+            /* CameraStereoL Image */
+            auto out_scaml = &CMNode.Topics.Pub.CameraStereoL;
+
+            if ((rv = CMCRJob_DoJob(out_scaml->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_scaml->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_scaml->Pub.publish(out_scaml->Msg);
+                CMNode.Topics.Pub.CameraStereoL.Msg.data.clear();
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* CameraStereoL Info */
+            auto out_scamli = &CMNode.Topics.Pub.CameraInfoL;
+
+            if ((rv = CMCRJob_DoJob(out_scamli->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_scamli->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_scamli->Pub.publish(out_scamli->Msg);
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* CameraStereoRGB Image */
+            auto out_rgbcam = &CMNode.Topics.Pub.CameraRGB;
+
+            if ((rv = CMCRJob_DoJob(out_rgbcam->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_rgbcam->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_rgbcam->Pub.publish(out_rgbcam->Msg);
+                CMNode.Topics.Pub.CameraRGB.Msg.data.clear();
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* CameraStereoRGB Info */
+            auto out_rgbcami = &CMNode.Topics.Pub.CameraInfoRGB;
+
+            if ((rv = CMCRJob_DoJob(out_rgbcami->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_rgbcami->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_rgbcami->Pub.publish(out_rgbcami->Msg);
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* Update the coordinate transformation between Fr1 and Fr_CameraStereoL */
+            CMNode.Sensor.CameraStereoL.TF.header.stamp = ros::Time(SimCore.Time);
+            CMNode.Global.TF_br->sendTransform(CMNode.Sensor.CameraStereoL.TF);
+        }
+
+        /* Publish CameraStereoR messages */
+        if (CMNode.Sensor.CameraStereoR.Active) {
+            /* CameraStereoR Image */
+            auto out_scamr = &CMNode.Topics.Pub.CameraStereoR;
+
+            if ((rv = CMCRJob_DoJob(out_scamr->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_scamr->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_scamr->Pub.publish(out_scamr->Msg);
+                CMNode.Topics.Pub.CameraStereoR.Msg.data.clear();
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* CameraStereoR Info */
+            auto out_scamri = &CMNode.Topics.Pub.CameraInfoR;
+
+            if ((rv = CMCRJob_DoJob(out_scamri->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_scamri->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_scamri->Pub.publish(out_scamri->Msg);
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* Update the coordinate transformation between Fr1 and Fr_CameraStereoR */
+            CMNode.Sensor.CameraStereoR.TF.header.stamp = ros::Time(SimCore.Time);
+            CMNode.Global.TF_br->sendTransform(CMNode.Sensor.CameraStereoR.TF);
         }
 
         /* Publish vehicle velocity messages */

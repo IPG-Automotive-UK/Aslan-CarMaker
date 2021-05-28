@@ -20,6 +20,7 @@ set(CARMAKER_NUMVER 100000)
 
 set(CARMAKER_DIR $ENV{IPGHOME}/carmaker/linux64-${CARMAKER_VER})
 set(CARMAKER_INC_DIR ${CARMAKER_DIR}/include)
+set(PROJECT_INC_DIR ${CMAKE_SOURCE_DIR}/../../../include)
 set(CMAKE_POSITION_INDEPENDENT_CODE_ON)
 
 add_definitions(-DCM_NUMVER=${CARMAKER_NUMVER})
@@ -157,6 +158,7 @@ catkin_package(
 include_directories(
   include ${catkin_INCLUDE_DIRS}
   include ${CARMAKER_INC_DIR}
+  include ${PROJECT_INC_DIR}
 )
 
 ## Declare a C++ library

@@ -91,6 +91,8 @@
 #include "IOVec.h"
 #include "User.h"
 
+#include "rsds-client-camera.h"
+
 #if defined(WITH_CMROSIF)
 #  include "CMRosIF.h"
 #endif
@@ -142,16 +144,16 @@ User_PrintUsage (const char *Pgm)
     LogUsage("Usage: %s [options] [testrun]\n", Pgm);
     LogUsage("Options:\n");
 
-#if defined(CM_HIL)
-    {
-	const tIOConfig *cf;
-	const char *defio = IO_GetDefault();
-	LogUsage(" -io %-12s Default I/O configuration (%s)\n", "default",
-	    (defio!=NULL && strcmp(defio, "none")!=0) ? defio : "minimal I/O");
-	for (cf=IO_GetConfigurations(); cf->Name!=NULL; cf++)
-	    LogUsage(" -io %-12s %s\n", cf->Name, cf->Description);
-    }
-#endif
+    #if defined(CM_HIL)
+        {
+    	const tIOConfig *cf;
+    	const char *defio = IO_GetDefault();
+    	LogUsage(" -io %-12s Default I/O configuration (%s)\n", "default",
+    	    (defio!=NULL && strcmp(defio, "none")!=0) ? defio : "minimal I/O");
+    	for (cf=IO_GetConfigurations(); cf->Name!=NULL; cf++)
+    	    LogUsage(" -io %-12s %s\n", cf->Name, cf->Description);
+        }
+    #endif
 }
 
 
@@ -209,14 +211,17 @@ User_ScanCmdLine (int argc, char **argv)
 int
 User_Init (void)
 {
+    /* Initialise the Camera_RSI RSDS client */
+    RSDS_Init();
 
-#if defined(WITH_CMROSIF)
-    int rv;
+    /* Initialise the ROS node */
+    #if defined(WITH_CMROSIF)
+        int rv;
 
-    if ((rv=CMRosIF_Init()) < 0)  /* Check for zero removed to force Log message of missing symbol */
-	return rv;
+        if ((rv=CMRosIF_Init()) < 0)  /* Check for zero removed to force Log message of missing symbol */
+    	return rv;
 
-#endif
+    #endif
 
     return 0;
 }
@@ -255,13 +260,13 @@ User_DeclQuants (void)
 	sprintf (sbuf, "UserOut_%02d", i);
 	DDefDouble (NULL, sbuf, "", &User.Out[i], DVA_IO_Out);
     }
-#if !defined(LABCAR)
-    RBS_DeclQuants();
-#endif
+    #if !defined(LABCAR)
+        RBS_DeclQuants();
+    #endif
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_DeclQuants();
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_DeclQuants();
+    #endif
 
 }
 
@@ -287,11 +292,11 @@ User_DeclQuants (void)
 int
 User_Param_Add (void)
 {
-#if defined(CM_HIL)
-    /* ECU parameters */
-    if (SimCore.TestRig.ECUParam.Inf == NULL)
-	return -1;
-#endif
+    #if defined(CM_HIL)
+        /* ECU parameters */
+        if (SimCore.TestRig.ECUParam.Inf == NULL)
+    	return -1;
+    #endif
 
     return 0;
 }
@@ -327,14 +332,14 @@ User_Param_Get (void)
 {
     int rv = 0;
 
-#if defined(CM_HIL)
-    /*** testrig / ECU parameters */
-    if (SimCore.TestRig.ECUParam.Inf == NULL)
-	return -1;
+    #if defined(CM_HIL)
+        /*** testrig / ECU parameters */
+        if (SimCore.TestRig.ECUParam.Inf == NULL)
+    	return -1;
 
-    if (IO_Param_Get(SimCore.TestRig.ECUParam.Inf) != 0)
-	rv = -2;
-#endif
+        if (IO_Param_Get(SimCore.TestRig.ECUParam.Inf) != 0)
+    	rv = -2;
+    #endif
 
     /*** simulation parameters */
     if (SimCore.TestRig.SimParam.Inf == NULL)
@@ -371,17 +376,17 @@ User_TestRun_Start_atBegin (void)
     for (i=0; i<N_USEROUTPUT; i++)
 	User.Out[i] = 0.0;
 
-#if defined(WITH_CMROSIF)
-    rv = CMRosIF_TestRun_Start_atBegin();
-#endif
+    #if defined(WITH_CMROSIF)
+        rv = CMRosIF_TestRun_Start_atBegin();
+    #endif
 
     if (IO_None)
 	return rv;
 
-#if defined(CM_HIL)
-    if (FST_New(SimCore.TestRig.ECUParam.Inf) != 0)
-	rv = -6;
-#endif
+    #if defined(CM_HIL)
+        if (FST_New(SimCore.TestRig.ECUParam.Inf) != 0)
+    	rv = -6;
+    #endif
 
     return rv;
 }
@@ -409,6 +414,8 @@ User_TestRun_Start_atBegin (void)
 int
 User_TestRun_Start_atEnd (void)
 {
+    /* Camera_RSI RSDS client start */
+    RSDS_Start();
     return 0;
 }
 
@@ -465,9 +472,9 @@ User_TestRun_RampUp (double dt)
 {
     int IsReady = 1;
 
-#if defined(WITH_CMROSIF)
-    IsReady = CMRosIF_TestRun_RampUp();
-#endif
+    #if defined(WITH_CMROSIF)
+        IsReady = CMRosIF_TestRun_RampUp();
+    #endif
 
     return IsReady;
 }
@@ -512,9 +519,9 @@ int
 User_TestRun_End (void)
 {
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_TestRun_End();
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_TestRun_End();
+    #endif
 
     return 0;
 }
@@ -536,9 +543,9 @@ void
 User_In (const unsigned CycleNo)
 {
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_In();
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_In();
+    #endif
 
     if (SimCore.State != SCState_Simulate)
 	return;
@@ -563,9 +570,9 @@ User_DrivMan_Calc (double dt)
     if (Vehicle.OperationState != OperState_Driving)
 	return 0;
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_DrivMan_Calc(dt);
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_DrivMan_Calc(dt);
+    #endif
 
     return 0;
 }
@@ -588,9 +595,9 @@ User_VehicleControl_Calc (double dt)
     if (Vehicle.OperationState != OperState_Driving)
 	return 0;
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_VehicleControl_Calc(dt);
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_VehicleControl_Calc(dt);
+    #endif
 
     return 0;
 }
@@ -651,9 +658,9 @@ User_Calc (double dt)
        of CM 5.1 and earlier. */
     /*if (!UserCalcCalledByAppTestRunCalc) return 0;*/
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_Calc(dt);
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_Calc(dt);
+    #endif
 
     return 0;
 }
@@ -718,13 +725,13 @@ User_Check_IsIdle (int IsIdle)
 void
 User_Out (const unsigned CycleNo)
 {
-#if !defined(LABCAR)
-    RBS_OutMap(CycleNo);
-#endif
+    #if !defined(LABCAR)
+        RBS_OutMap(CycleNo);
+    #endif
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_Out();
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_Out();
+    #endif
 
     if (SimCore.State != SCState_Simulate)
 	return;
@@ -752,14 +759,14 @@ User_Out (const unsigned CycleNo)
 int
 User_ApoMsg_Eval (int Ch, char *Msg, int len, int who)
 {
-#if defined(CM_HIL)
-    /*** FailSafeTester */
-    if (Ch == ApoCh_CarMaker) {
-	if (FST_ApoMsgEval(Ch, Msg, len) <= 0)
-	    return 0;
-    }
+    #if defined(CM_HIL)
+        /*** FailSafeTester */
+        if (Ch == ApoCh_CarMaker) {
+    	if (FST_ApoMsgEval(Ch, Msg, len) <= 0)
+    	    return 0;
+        }
 
-#endif
+    #endif
     return -1;
 }
 
@@ -823,9 +830,9 @@ int
 User_End (void)
 {
 
-#if defined(WITH_CMROSIF)
-    CMRosIF_End();
-#endif
+    #if defined(WITH_CMROSIF)
+        CMRosIF_End();
+    #endif
 
     return 0;
 }
@@ -845,4 +852,6 @@ User_End (void)
 void
 User_Cleanup (void)
 {
+    /* Camera_RSI RSDS client exit */
+    RSDS_Exit();
 }

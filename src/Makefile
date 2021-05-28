@@ -22,7 +22,7 @@ APP_NAME =		CarMaker.$(ARCH)$(EXE_EXT)
 
 LD_LIBS =		$(CAR_LIB) \
 			$(CARMAKER_LIB) $(DRIVER_LIB) $(ROAD_LIB) $(TIRE_LIB)
-OBJS =			CM_Main.o CM_Vehicle.o User.o
+OBJS =			CM_Main.o CM_Vehicle.o User.o rsds-client-camera.o
 
 # CarMaker extension CMRosIF (provided by IPG)
 DEF_CFLAGS      += -DWITH_CMROSIF

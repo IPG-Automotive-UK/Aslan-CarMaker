@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package>
   <name>cmnode</name>
-  <version>0.9.0</version>
+  <version>0.10.0</version>
   <description>Shared library for CarMaker ROS Node.</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
