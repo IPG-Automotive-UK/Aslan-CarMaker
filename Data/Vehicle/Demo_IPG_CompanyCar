@@ -580,7 +580,7 @@ SensorCluster.1.Tags = Default
 SensorCluster.1.Allocation = manual
 SensorCluster.1.Reflections = 3
 SensorCluster.1.Scattering = 0
-SensorCluster.1.CycleTime = 40.0
+SensorCluster.1.CycleTime = 40
 SensorCluster.1.CycleOffset = 0
 SensorCluster.N = 2
 

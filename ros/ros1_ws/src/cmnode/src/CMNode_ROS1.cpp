@@ -146,7 +146,7 @@ static struct {
 
     struct {
         struct {
-            int             Active;             /*!< Flag for engaging the GNav system */
+            int             Active;             /*!< Presence of active GNav sensors */
             double*         pos;                /*!< Mounting position on vehicle frame */
             double*         rot;                /*!< Mounting rotation on vehicle frame */
             int             UpdRate;
@@ -154,7 +154,7 @@ static struct {
         } GNav;
 
         struct {
-            int             N;                      /*!< Number of LidarRSI sensors */
+            int             Active;                 /*!< Presence of active LidarRSI sensors */
             double*         pos;                    /*!< Mounting position on vehicle frame */
             double*         rot;                    /*!< Mounting rotation on vehicle frame */
             int             UpdRate;
@@ -166,7 +166,7 @@ static struct {
         } LidarRSI;
 
         struct {
-            int             N;                      /*!< Number of RadarRSI sensors */
+            int             Active;                 /*!< Presence of active RadarRSI sensors */
             double*         pos;                    /*!< Mounting position on vehicle frame */
             double*         rot;                    /*!< Mounting rotation on vehicle frame */
             int             UpdRate;
@@ -600,13 +600,13 @@ extern "C" {
         char key[256];
         char *str               = NULL;
         int rv                  = 0;
+        int idxC, idxS, idxP, ref;
 
         int cycletime           = 0;
         int cycleoff            = 0;
         tCMCRJob *job           = NULL;
 
         tInfos *Inf_Vhcl = NULL;
-        tInfos *Inf_Env = NULL;
         tInfos *Inf_Lidar = NULL;
         tErrorMsg *err;
         int rStat;                              // Infofile read status
@@ -624,20 +624,72 @@ extern "C" {
 
         CMNode.Wheel.RL.pos                             = iGetFixedTable2(Inf_Vhcl, "Wheel.rl.pos", 3, 1);
 
+        /* Total number of mounted sensors */
+        int N = iGetIntOpt(Inf_Vhcl, "Sensor.N", 0);
+
         /* Global Navigation */
-        CMNode.Sensor.GNav.pos                          = iGetFixedTableOpt2(Inf_Vhcl, "Sensor.GNav.pos", def3c, 3, 1);
-        CMNode.Sensor.GNav.rot                          = iGetFixedTableOpt2(Inf_Vhcl, "Sensor.GNav.rot", def3c, 3, 1);
-        CMNode.Sensor.GNav.UpdRate                      = 1000.0/iGetIntOpt(Inf_Vhcl, "Sensor.GNav.UpdRate", 10);       /* Convert from update rate in Hz to cycle time in ms */
-        CMNode.Sensor.GNav.nCycleOffset                 = iGetIntOpt(Inf_Vhcl, "Sensor.GNav.nCycleOffset", 0);
+        idxP = -1;
+        for (idxS = 0; idxS < N; idxS++) {
+            sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
+            ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.Type", ref);
+            str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            if (!strcmp(str, "GNav")) {
+                /* If the GNav sensor is found, get its index and exit loop */
+                idxP = ref;
+                break;
+            }
+        }
+        if (idxP != -1) {
+            sprintf(sbuf, "Sensor.%d.Active", idxS);
+            CMNode.Sensor.GNav.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.%d.pos", idxS);
+            CMNode.Sensor.GNav.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "Sensor.%d.rot", idxS);
+            CMNode.Sensor.GNav.rot                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "Sensor.Param.%d.UpdRate", idxP);
+            CMNode.Sensor.GNav.UpdRate                  = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            sprintf(sbuf, "Sensor.Param.%d.CycleOffset", idxP);
+            CMNode.Sensor.GNav.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+        } else {
+            CMNode.Sensor.GNav.Active                   = 0;
+        }
 
         /* LiDAR RSI */
-        CMNode.Sensor.LidarRSI.N                        = iGetIntOpt(Inf_Vhcl, "Sensor.LidarRSI.N", 0);
-        CMNode.Sensor.LidarRSI.pos                      = iGetFixedTableOpt2(Inf_Vhcl, "Sensor.LidarRSI.0.pos", def3c, 3, 1);
-        CMNode.Sensor.LidarRSI.rot                      = iGetFixedTableOpt2(Inf_Vhcl, "Sensor.LidarRSI.0.rot", def3c, 3, 1);
-        CMNode.Sensor.LidarRSI.UpdRate                  = iGetIntOpt(Inf_Vhcl, "Sensor.LidarRSI.0.CycleTime", 10);
-        CMNode.Sensor.LidarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, "Sensor.LidarRSI.0.nCycleOffset", 0);
-        CMNode.Sensor.LidarRSI.nCycleOffset            *= iGetIntOpt(Inf_Vhcl, "Sensor.LidarRSI.CycleOffsetIgnore", 0); /* Set offset to 0 if ingnored in CarMaker */
-        CMNode.Sensor.LidarRSI.BeamFName                = iGetStrOpt(Inf_Vhcl, "Sensor.LidarRSI.0.BeamsFName", "LidarRSI_Default");
+        idxP = -1;
+        for (idxS = 0; idxS < N; idxS++) {
+            sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
+            ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.Type", ref);
+            str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            LOG("Comparing L=%s to R=%s", str, "LidarRSI");
+            if (!strcmp(str, "LidarRSI")) {
+                /* If the LidarRSI sensor is found, get its index and exit loop */
+                idxP = ref;
+                sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
+                idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+                LOG("LidarRSI found at S=%d, C=%d, P=%d", idxS, idxC, idxP);
+                break;
+            }
+        }
+        if (idxP != -1) {
+            sprintf(sbuf, "Sensor.%d.Active", idxS);
+            CMNode.Sensor.LidarRSI.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            LOG("LidarRSI Sensor Active: %s", sbuf);
+            LOG("LidarRSI Sensor Active=%d", CMNode.Sensor.LidarRSI.Active);
+            sprintf(sbuf, "Sensor.%d.pos", idxS);
+            CMNode.Sensor.LidarRSI.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "Sensor.%d.rot", idxS);
+            CMNode.Sensor.LidarRSI.rot                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "SensorCluster.%d.CycleTime", idxC);
+            CMNode.Sensor.LidarRSI.UpdRate                  = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            sprintf(sbuf, "SensorCluster.%d.CycleOffset", idxC);
+            CMNode.Sensor.LidarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.BeamsFName", idxP);
+            CMNode.Sensor.LidarRSI.BeamFName                = iGetStrOpt(Inf_Vhcl, sbuf, "LidarRSI_Default");
+        } else {
+            CMNode.Sensor.LidarRSI.Active                   = 0;
+        }
 
         CMNode.Sensor.LidarRSI.TF.header.frame_id       = "Fr1";
         CMNode.Sensor.LidarRSI.TF.child_frame_id        = "Fr_LidarRSI";
@@ -682,13 +734,36 @@ extern "C" {
         CMNode.Sensor.LidarRSI.Beams                    = iGetTableOpt2(Inf_Lidar, "Beams", def6c, 6, &CMNode.Sensor.LidarRSI.nBeams);
 
         /* RADAR RSI */
-        CMNode.Sensor.RadarRSI.N                        = iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.N", 0);
-        CMNode.Sensor.RadarRSI.pos                      = iGetFixedTableOpt2(Inf_Vhcl, "Sensor.RadarRSI.0.pos", def3c, 3, 1);
-        CMNode.Sensor.RadarRSI.rot                      = iGetFixedTableOpt2(Inf_Vhcl, "Sensor.RadarRSI.0.rot", def3c, 3, 1);
-        CMNode.Sensor.RadarRSI.UpdRate                  = iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.0.CycleTime", 10);
-        CMNode.Sensor.RadarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.0.nCycleOffset", 0);
-        CMNode.Sensor.RadarRSI.nCycleOffset            *= iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.CycleOffsetIgnore", 0); /* Set offset to 0 if ingnored in CarMaker */
-        CMNode.Sensor.RadarRSI.OutputType               = iGetIntOpt(Inf_Vhcl, "Sensor.RadarRSI.0.OutputType", 0);
+        idxP = -1;
+        for (idxS = 0; idxS < N; idxS++) {
+            sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
+            ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.Type", ref);
+            str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            if (!strcmp(str, "RadarRSI")) {
+                /* If the RadarRSI sensor is found, get its index and exit loop */
+                idxP = ref;
+                sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
+                idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+                break;
+            }
+        }
+        if (idxP != -1) {
+            sprintf(sbuf, "Sensor.%d.Active", idxS);
+            CMNode.Sensor.RadarRSI.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.%d.pos", idxS);
+            CMNode.Sensor.RadarRSI.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "Sensor.%d.rot", idxS);
+            CMNode.Sensor.RadarRSI.rot                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "SensorCluster.%d.CycleTime", idxC);
+            CMNode.Sensor.RadarRSI.UpdRate                  = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            sprintf(sbuf, "SensorCluster.%d.CycleOffset", idxC);
+            CMNode.Sensor.RadarRSI.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.OutputType", idxP);
+            CMNode.Sensor.RadarRSI.OutputType               = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+        } else {
+            CMNode.Sensor.RadarRSI.Active                   = 0;
+        }
 
         CMNode.Sensor.RadarRSI.TF.header.frame_id       = "Fr1";
         CMNode.Sensor.RadarRSI.TF.child_frame_id        = "Fr_RadarRSI";
@@ -701,20 +776,11 @@ extern "C" {
         CMNode.Sensor.RadarRSI.TF.transform.translation.y = CMNode.Sensor.RadarRSI.pos[1];
         CMNode.Sensor.RadarRSI.TF.transform.translation.z = CMNode.Sensor.RadarRSI.pos[2];
 
-        /* Read the Environmental Infofile */
-        const char *FName_Env;
-        FName_Env = InfoGetFilename(SimCore.TestRun.Inf);   /* get the filename of the Infofile */
-        Inf_Env = InfoNew();
-        iRead2(&err, Inf_Env, FName_Env, "Inf_Env");        /* Create infofile handle */
-
-        CMNode.Sensor.GNav.Active  = iGetIntOpt(Inf_Env, "Env.GNav.Active", 0);
-
         LOG("CarMaker ROS Node is enabled! Mode=%d", *pmode);
         LOG("  -> Node Name = %s", ros::this_node::getName().c_str());
 
         /* Close all Infofile handles */
         InfoDelete(Inf_Vhcl);
-        InfoDelete(Inf_Env);
         InfoDelete(Inf_Lidar);
 
         /* Reset for next cycle */
@@ -1008,7 +1074,7 @@ extern "C" {
         }
 
         /* Publish LiDAR RSI data from CarMaker */
-        if (CMNode.Sensor.LidarRSI.N > 0) {
+        if (CMNode.Sensor.LidarRSI.Active) {
             if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.LidarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
                 LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.LidarRSI.Job), CMCRJob_RVStr(rv));
             } else if (rv == CMCRJob_RV_DoSomething) {
@@ -1054,7 +1120,7 @@ extern "C" {
         }
 
         /* Publish RADAR RSI data from CarMaker */
-        if (CMNode.Sensor.RadarRSI.N > 0) {
+        if (CMNode.Sensor.RadarRSI.Active) {
             if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.RadarRSI.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
                 LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.RadarRSI.Job), CMCRJob_RVStr(rv));
             } else if (rv == CMCRJob_RV_DoSomething) {
@@ -1162,7 +1228,7 @@ extern "C" {
         }
 
         /* Publish LiDAR PointCloud2 messages */
-        if (CMNode.Sensor.LidarRSI.N > 0) {
+        if (CMNode.Sensor.LidarRSI.Active) {
             auto out_lidar = &CMNode.Topics.Pub.LidarRSI;
 
             if ((rv = CMCRJob_DoJob(out_lidar->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
@@ -1182,7 +1248,7 @@ extern "C" {
         }
 
         /* Publish RADAR PointCloud2 messages */
-        if (CMNode.Sensor.RadarRSI.N > 0) {
+        if (CMNode.Sensor.RadarRSI.Active) {
             auto out_radar = &CMNode.Topics.Pub.RadarRSI;
 
             if ((rv = CMCRJob_DoJob(out_radar->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
