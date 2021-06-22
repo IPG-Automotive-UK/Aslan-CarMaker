@@ -38,7 +38,7 @@ src/CarMaker.linux32
 src/CarMaker.linux64
 
 # Ignore VSCode project metadata
-src/.vscode/
+.vscode/
 
 # Ignore Visual Studio project metadata
 src/.vs/
