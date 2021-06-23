@@ -80,3 +80,23 @@ Node.Sync.Mode = 0
 Node.Sync.TimeMax = 5.0
 Node.UseSimTime = 1
 Node.nCyclesClock = 100
+
+
+## Camera Names (e.g. used inside CMNode) ################
+#
+# The CarMaker-ASLAN bridge supports one stereo camera RSI and one mono camera RSI.
+# To match the correct ROS topics expected by ASLAN to the respective CameraRSI sensors 
+# in CarMaker, the sensor names must be assigned to a specific camera type.
+#
+# Warning: 	The sensor names here must match the sensor names defined in CarMaker exactly 
+# 		or they will not be correctly assigned. This is case-sensitive.
+#
+# Keys:
+# - Camera.Stereo.Left.Name  	= Name of the stereo left camera sensor.
+# - Camera.Stereo.Right.Name  	= Name of the stereo right camera sensor.
+# - Camera.Mono.Name 		= Name of the mono camera sensor.
+#
+
+Camera.Stereo.Left.Name = ZED_L
+Camera.Stereo.Right.Name = ZED_R
+Camera.Mono.Name = PYLON

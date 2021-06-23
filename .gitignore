@@ -56,3 +56,5 @@ bin/
 # Ignore CarMaker project outputs and cache
 SimOutput/
 Movie/.road_cache/
+Data/TestRun/.tmp*
+Data/Vehicle/.tmp*

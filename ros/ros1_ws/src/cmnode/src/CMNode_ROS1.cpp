@@ -194,6 +194,7 @@ static struct {
             int             UpdRate;
             char*           OutputFormat;           /*!< Format of the output image data */
             int             Channel;                /*!< RSDS channel where the camera data occurs */
+            char*           Name;                   /*!< User-defined name for the sensor */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } CameraStereoL;
 
@@ -205,6 +206,7 @@ static struct {
             int             UpdRate;
             char*           OutputFormat;           /*!< Format of the output image data */
             int             Channel;                /*!< RSDS channel where the camera data occurs */
+            char*           Name;                   /*!< User-defined name for the sensor */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } CameraStereoR;
 
@@ -216,6 +218,7 @@ static struct {
             int             UpdRate;
             char*           OutputFormat;           /*!< Format of the output image data */
             int             Channel;                /*!< RSDS channel where the camera data occurs */
+            char*           Name;                   /*!< User-defined name for the sensor */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } CameraMono;
     } Sensor; /*!< Sensor parameters */
@@ -677,6 +680,10 @@ extern "C" {
 
         if (Inf != NULL) {
             *pmode     =     (tCMNode_Mode)iGetIntOpt(Inf, "Node.Mode",      CMNode_Mode_Disabled);
+            
+            CMNode.Sensor.CameraStereoL.Name    = iGetStrOpt(Inf, "Camera.Stereo.Left.Name", "");
+            CMNode.Sensor.CameraStereoR.Name    = iGetStrOpt(Inf, "Camera.Stereo.Right.Name", "");
+            CMNode.Sensor.CameraMono.Name       = iGetStrOpt(Inf, "Camera.Mono.Name", "");
         }
 
         if (SimCore.CycleNo == 0 || Inf == NULL || *pmode == CMNode_Mode_Disabled) {
@@ -875,8 +882,7 @@ extern "C" {
                 /* If the CameraRSI sensor is found, check the name */
                 sprintf(sbuf, "Sensor.%d.name", idxS);
                 str = iGetStrOpt(Inf_Vhcl, sbuf, "");
-                // TODO: parameterise this name
-                if (!strcmp(str, "ZED_L")) {
+                if (!strcmp(str, CMNode.Sensor.CameraStereoL.Name)) {
                     /* If the matching name is found, get its index and exit loop */
                     idxP = ref;
                     sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
@@ -930,8 +936,7 @@ extern "C" {
                 /* If the CameraRSI sensor is found, check the name */
                 sprintf(sbuf, "Sensor.%d.name", idxS);
                 str = iGetStrOpt(Inf_Vhcl, sbuf, "");
-                // TODO: parameterise this name
-                if (!strcmp(str, "ZED_R")) {
+                if (!strcmp(str, CMNode.Sensor.CameraStereoR.Name)) {
                     /* If the matching name is found, get its index and exit loop */
                     idxP = ref;
                     sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
@@ -985,8 +990,7 @@ extern "C" {
                 /* If the CameraRSI sensor is found, check the name */
                 sprintf(sbuf, "Sensor.%d.name", idxS);
                 str = iGetStrOpt(Inf_Vhcl, sbuf, "");
-                // TODO: parameterise this name
-                if (!strcmp(str, "PYLON")) {
+                if (!strcmp(str, CMNode.Sensor.CameraMono.Name)) {
                     /* If the matching name is found, get its index and exit loop */
                     idxP = ref;
                     sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
