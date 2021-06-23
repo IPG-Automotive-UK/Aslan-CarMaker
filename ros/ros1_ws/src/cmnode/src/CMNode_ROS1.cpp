@@ -193,6 +193,7 @@ static struct {
             int             nCycleOffset;
             int             UpdRate;
             char*           OutputFormat;           /*!< Format of the output image data */
+            int             Channel;                /*!< RSDS channel where the camera data occurs */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } CameraStereoL;
 
@@ -203,6 +204,7 @@ static struct {
             int             nCycleOffset;
             int             UpdRate;
             char*           OutputFormat;           /*!< Format of the output image data */
+            int             Channel;                /*!< RSDS channel where the camera data occurs */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } CameraStereoR;
 
@@ -213,6 +215,7 @@ static struct {
             int             nCycleOffset;
             int             UpdRate;
             char*           OutputFormat;           /*!< Format of the output image data */
+            int             Channel;                /*!< RSDS channel where the camera data occurs */
             geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
         } CameraMono;
     } Sensor; /*!< Sensor parameters */
@@ -446,7 +449,7 @@ extern "C" {
         CMNode.Topics.Pub.CameraMono.Job    = CMCRJob_Create("CAMERA_M");
 
         /* Mono Camera RSI Info pub */
-        strcpy(sbuf, "/pylon_camera/image_info");
+        strcpy(sbuf, "/pylon_camera/camera_info");
         LOG("  -> Publish '%s'", sbuf);
         CMNode.Topics.Pub.CameraMonoInfo.Pub = node->advertise<sensor_msgs::CameraInfo>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
         CMNode.Topics.Pub.CameraMonoInfo.Job = CMCRJob_Create("CAMERA_INFO_M");
@@ -686,7 +689,7 @@ extern "C" {
         char key[256];
         char *str               = NULL;
         int rv                  = 0;
-        int idxC, idxS, idxP, ref;
+        int idxC, idxS, idxP, Channel, ref;
 
         int cycletime           = 0;
         int cycleoff            = 0;
@@ -862,6 +865,7 @@ extern "C" {
 
         /* CameraStereoL */
         idxP = -1;
+        Channel = 0;
         for (idxS = 0; idxS < N; idxS++) {
             sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
             ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
@@ -878,40 +882,45 @@ extern "C" {
                     sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
                     idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
                     break;
+                } else {
+                    /* A different CameraRSI was found, increment the channel number */
+                    Channel++;
                 }
             }
         }
         if (idxP != -1) {
             sprintf(sbuf, "Sensor.%d.Active", idxS);
-            CMNode.Sensor.CameraStereoL.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            CMNode.Sensor.CameraStereoL.Active                      = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.%d.pos", idxS);
-            CMNode.Sensor.CameraStereoL.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            CMNode.Sensor.CameraStereoL.pos                         = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
             sprintf(sbuf, "Sensor.%d.rot", idxS);
-            CMNode.Sensor.CameraStereoL.rot                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            CMNode.Sensor.CameraStereoL.rot                         = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
             sprintf(sbuf, "SensorCluster.%d.CycleTime", idxC);
-            CMNode.Sensor.CameraStereoL.UpdRate                  = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            CMNode.Sensor.CameraStereoL.UpdRate                     = iGetIntOpt(Inf_Vhcl, sbuf, 10);
             sprintf(sbuf, "SensorCluster.%d.CycleOffset", idxC);
-            CMNode.Sensor.CameraStereoL.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            CMNode.Sensor.CameraStereoL.nCycleOffset                = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.Param.%d.OutputFormat", idxP);
-            CMNode.Sensor.CameraStereoL.OutputFormat             = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            CMNode.Sensor.CameraStereoL.OutputFormat                = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            CMNode.Sensor.CameraStereoL.Channel                     = Channel;
         
             /* Build the CameraStereoL frame transformation */
-            CMNode.Sensor.CameraStereoL.TF.header.frame_id       = "Fr1";
-            CMNode.Sensor.CameraStereoL.TF.child_frame_id        = "Fr_CameraStereoL";
+            CMNode.Sensor.CameraStereoL.TF.header.frame_id          = "Fr1";
+            CMNode.Sensor.CameraStereoL.TF.child_frame_id           = "Fr_CameraStereoL";
             q.setRPY(CMNode.Sensor.CameraStereoL.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraStereoL.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraStereoL.rot[2] * DEG_to_RAD);
-            CMNode.Sensor.CameraStereoL.TF.transform.rotation.x  = q.x();
-            CMNode.Sensor.CameraStereoL.TF.transform.rotation.y  = q.y();
-            CMNode.Sensor.CameraStereoL.TF.transform.rotation.z  = q.z();
-            CMNode.Sensor.CameraStereoL.TF.transform.rotation.w  = q.w();
-            CMNode.Sensor.CameraStereoL.TF.transform.translation.x = CMNode.Sensor.CameraStereoL.pos[0];
-            CMNode.Sensor.CameraStereoL.TF.transform.translation.y = CMNode.Sensor.CameraStereoL.pos[1];
-            CMNode.Sensor.CameraStereoL.TF.transform.translation.z = CMNode.Sensor.CameraStereoL.pos[2];
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.x     = q.x();
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.y     = q.y();
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.z     = q.z();
+            CMNode.Sensor.CameraStereoL.TF.transform.rotation.w     = q.w();
+            CMNode.Sensor.CameraStereoL.TF.transform.translation.x  = CMNode.Sensor.CameraStereoL.pos[0];
+            CMNode.Sensor.CameraStereoL.TF.transform.translation.y  = CMNode.Sensor.CameraStereoL.pos[1];
+            CMNode.Sensor.CameraStereoL.TF.transform.translation.z  = CMNode.Sensor.CameraStereoL.pos[2];
         } else {
-            CMNode.Sensor.CameraStereoL.Active                   = 0;
+            CMNode.Sensor.CameraStereoL.Active                      = 0;
         }
 
         /* CameraStereoR */
         idxP = -1;
+        Channel = 0;
         for (idxS = 0; idxS < N; idxS++) {
             sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
             ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
@@ -928,36 +937,95 @@ extern "C" {
                     sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
                     idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
                     break;
+                } else {
+                    /* A different CameraRSI was found, increment the channel number */
+                    Channel++;
                 }
             }
         }
         if (idxP != -1) {
             sprintf(sbuf, "Sensor.%d.Active", idxS);
-            CMNode.Sensor.CameraStereoR.Active                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            CMNode.Sensor.CameraStereoR.Active                      = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.%d.pos", idxS);
-            CMNode.Sensor.CameraStereoR.pos                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            CMNode.Sensor.CameraStereoR.pos                         = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
             sprintf(sbuf, "Sensor.%d.rot", idxS);
-            CMNode.Sensor.CameraStereoR.rot                      = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            CMNode.Sensor.CameraStereoR.rot                         = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
             sprintf(sbuf, "SensorCluster.%d.CycleTime", idxC);
-            CMNode.Sensor.CameraStereoR.UpdRate                  = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            CMNode.Sensor.CameraStereoR.UpdRate                     = iGetIntOpt(Inf_Vhcl, sbuf, 10);
             sprintf(sbuf, "SensorCluster.%d.CycleOffset", idxC);
-            CMNode.Sensor.CameraStereoR.nCycleOffset             = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            CMNode.Sensor.CameraStereoR.nCycleOffset                = iGetIntOpt(Inf_Vhcl, sbuf, 0);
             sprintf(sbuf, "Sensor.Param.%d.OutputFormat", idxP);
-            CMNode.Sensor.CameraStereoR.OutputFormat             = iGetStrOpt(Inf_Vhcl, sbuf, "");
-        
+            CMNode.Sensor.CameraStereoR.OutputFormat                = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            CMNode.Sensor.CameraStereoR.Channel                     = Channel;
+
             /* Build the CameraStereoR frame transformation */
-            CMNode.Sensor.CameraStereoR.TF.header.frame_id       = "Fr1";
-            CMNode.Sensor.CameraStereoR.TF.child_frame_id        = "Fr_CameraStereoR";
+            CMNode.Sensor.CameraStereoR.TF.header.frame_id          = "Fr1";
+            CMNode.Sensor.CameraStereoR.TF.child_frame_id           = "Fr_CameraStereoR";
             q.setRPY(CMNode.Sensor.CameraStereoR.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraStereoR.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraStereoR.rot[2] * DEG_to_RAD);
-            CMNode.Sensor.CameraStereoR.TF.transform.rotation.x  = q.x();
-            CMNode.Sensor.CameraStereoR.TF.transform.rotation.y  = q.y();
-            CMNode.Sensor.CameraStereoR.TF.transform.rotation.z  = q.z();
-            CMNode.Sensor.CameraStereoR.TF.transform.rotation.w  = q.w();
-            CMNode.Sensor.CameraStereoR.TF.transform.translation.x = CMNode.Sensor.CameraStereoR.pos[0];
-            CMNode.Sensor.CameraStereoR.TF.transform.translation.y = CMNode.Sensor.CameraStereoR.pos[1];
-            CMNode.Sensor.CameraStereoR.TF.transform.translation.z = CMNode.Sensor.CameraStereoR.pos[2];
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.x     = q.x();
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.y     = q.y();
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.z     = q.z();
+            CMNode.Sensor.CameraStereoR.TF.transform.rotation.w     = q.w();
+            CMNode.Sensor.CameraStereoR.TF.transform.translation.x  = CMNode.Sensor.CameraStereoR.pos[0];
+            CMNode.Sensor.CameraStereoR.TF.transform.translation.y  = CMNode.Sensor.CameraStereoR.pos[1];
+            CMNode.Sensor.CameraStereoR.TF.transform.translation.z  = CMNode.Sensor.CameraStereoR.pos[2];
         } else {
-            CMNode.Sensor.CameraStereoR.Active                   = 0;
+            CMNode.Sensor.CameraStereoR.Active                      = 0;
+        }
+
+        /* CameraMono */
+        idxP = -1;
+        Channel = 0;
+        for (idxS = 0; idxS < N; idxS++) {
+            sprintf(sbuf, "Sensor.%d.Ref.Param", idxS);
+            ref = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.Type", ref);
+            str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            if (!strcmp(str, "CameraRSI")) {
+                /* If the CameraRSI sensor is found, check the name */
+                sprintf(sbuf, "Sensor.%d.name", idxS);
+                str = iGetStrOpt(Inf_Vhcl, sbuf, "");
+                // TODO: parameterise this name
+                if (!strcmp(str, "PYLON")) {
+                    /* If the matching name is found, get its index and exit loop */
+                    idxP = ref;
+                    sprintf(sbuf, "Sensor.%d.Ref.Cluster", idxS);
+                    idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+                    break;
+                } else {
+                    /* A different CameraRSI was found, increment the channel number */
+                    Channel++;
+                }
+            }
+        }
+        if (idxP != -1) {
+            sprintf(sbuf, "Sensor.%d.Active", idxS);
+            CMNode.Sensor.CameraMono.Active                         = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.%d.pos", idxS);
+            CMNode.Sensor.CameraMono.pos                            = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "Sensor.%d.rot", idxS);
+            CMNode.Sensor.CameraMono.rot                            = iGetFixedTableOpt2(Inf_Vhcl, sbuf, def3c, 3, 1);
+            sprintf(sbuf, "SensorCluster.%d.CycleTime", idxC);
+            CMNode.Sensor.CameraMono.UpdRate                        = iGetIntOpt(Inf_Vhcl, sbuf, 10);
+            sprintf(sbuf, "SensorCluster.%d.CycleOffset", idxC);
+            CMNode.Sensor.CameraMono.nCycleOffset                   = iGetIntOpt(Inf_Vhcl, sbuf, 0);
+            sprintf(sbuf, "Sensor.Param.%d.OutputFormat", idxP);
+            CMNode.Sensor.CameraMono.OutputFormat                   = iGetStrOpt(Inf_Vhcl, sbuf, "");
+            CMNode.Sensor.CameraMono.Channel                        = Channel;
+
+            /* Build the CameraMono frame transformation */
+            CMNode.Sensor.CameraMono.TF.header.frame_id             = "Fr1";
+            CMNode.Sensor.CameraMono.TF.child_frame_id              = "Fr_CameraMono";
+            q.setRPY(CMNode.Sensor.CameraMono.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraMono.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraMono.rot[2] * DEG_to_RAD);
+            CMNode.Sensor.CameraMono.TF.transform.rotation.x        = q.x();
+            CMNode.Sensor.CameraMono.TF.transform.rotation.y        = q.y();
+            CMNode.Sensor.CameraMono.TF.transform.rotation.z        = q.z();
+            CMNode.Sensor.CameraMono.TF.transform.rotation.w        = q.w();
+            CMNode.Sensor.CameraMono.TF.transform.translation.x     = CMNode.Sensor.CameraMono.pos[0];
+            CMNode.Sensor.CameraMono.TF.transform.translation.y     = CMNode.Sensor.CameraMono.pos[1];
+            CMNode.Sensor.CameraMono.TF.transform.translation.z     = CMNode.Sensor.CameraMono.pos[2];
+        } else {
+            CMNode.Sensor.CameraMono.Active                         = 0;
         }
 
         LOG("CarMaker ROS Node is enabled! Mode=%d", *pmode);
@@ -1266,6 +1334,7 @@ extern "C" {
         int rv;
         uint8_t *ptr;
         int point_step, row_step;
+        int bgr_idx;
 
         /* 3D Coordinate system points */
         double x, y, z;
@@ -1413,8 +1482,8 @@ extern "C" {
                 CMNode.Topics.Pub.CameraStereoL.Msg.header.frame_id     = "Fr_CameraStereoL";
                 CMNode.Topics.Pub.CameraStereoL.Msg.header.stamp        = ros::Time(SimCore.Time);
 
-                // TODO: parameterise this
-                unsigned int cidx = 0;
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraStereoL.Channel;
 
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraStereoL.Msg.height              = CData[cidx].ImgHeight;
@@ -1443,8 +1512,8 @@ extern "C" {
                 CMNode.Topics.Pub.CameraRGB.Msg.header.frame_id         = "Fr_CameraStereoL";
                 CMNode.Topics.Pub.CameraRGB.Msg.header.stamp            = ros::Time(SimCore.Time);
 
-                // TODO: parameterise this
-                unsigned int cidx = 0;
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraStereoL.Channel;
 
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraRGB.Msg.height                  = CData[cidx].ImgHeight;
@@ -1473,8 +1542,8 @@ extern "C" {
                 CMNode.Topics.Pub.CameraInfoL.Msg.header.frame_id       = "Fr_CameraStereoL";
                 CMNode.Topics.Pub.CameraInfoL.Msg.header.stamp          = ros::Time(SimCore.Time);
 
-                // TODO: parameterise this
-                unsigned int cidx = 0;
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraStereoL.Channel;
 
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraInfoL.Msg.height                = CData[cidx].ImgHeight;
@@ -1509,8 +1578,8 @@ extern "C" {
                 CMNode.Topics.Pub.CameraInfoRGB.Msg.header.frame_id     = "Fr_CameraStereoL";
                 CMNode.Topics.Pub.CameraInfoRGB.Msg.header.stamp        = ros::Time(SimCore.Time);
 
-                // TODO: parameterise this
-                unsigned int cidx = 0;
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraStereoL.Channel;
 
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraInfoRGB.Msg.height              = CData[cidx].ImgHeight;
@@ -1547,8 +1616,8 @@ extern "C" {
                 CMNode.Topics.Pub.CameraStereoR.Msg.header.frame_id     = "Fr_CameraStereoR";
                 CMNode.Topics.Pub.CameraStereoR.Msg.header.stamp        = ros::Time(SimCore.Time);
 
-                // TODO: parameterise this
-                unsigned int cidx = 1;
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraStereoR.Channel;
 
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraStereoR.Msg.height              = CData[cidx].ImgHeight;
@@ -1577,8 +1646,8 @@ extern "C" {
                 CMNode.Topics.Pub.CameraInfoR.Msg.header.frame_id       = "Fr_CameraStereoR";
                 CMNode.Topics.Pub.CameraInfoR.Msg.header.stamp          = ros::Time(SimCore.Time);
 
-                // TODO: parameterise this
-                unsigned int cidx = 1;
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraStereoR.Channel;
 
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraInfoR.Msg.height                = CData[cidx].ImgHeight;
@@ -1602,6 +1671,76 @@ extern "C" {
                 CMNode.Topics.Pub.CameraInfoR.Msg.roi.height            = 0;
                 CMNode.Topics.Pub.CameraInfoR.Msg.roi.width             = 0;
                 CMNode.Topics.Pub.CameraInfoR.Msg.roi.do_rectify        = false;
+            }
+        }
+
+        /* Publish CameraMono RSI data from CarMaker */
+        if (CMNode.Sensor.CameraMono.Active) {
+            /* Image Data */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraMono.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraMono.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraMono.Msg.header.frame_id        = "Fr_CameraMono";
+                CMNode.Topics.Pub.CameraMono.Msg.header.stamp           = ros::Time(SimCore.Time);
+
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraMono.Channel;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraMono.Msg.height                 = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraMono.Msg.width                  = CData[cidx].ImgWidth;
+
+                /* Extract the image type */
+                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
+                    CMNode.Topics.Pub.CameraMono.Msg.encoding           = "bgr8";
+                    CMNode.Topics.Pub.CameraMono.Msg.is_bigendian       = true;
+                    CMNode.Topics.Pub.CameraMono.Msg.step               = CData[cidx].ImgWidth;
+                }
+
+                /* Create the output data binary blob */
+                CMNode.Topics.Pub.CameraMono.Msg.data.resize(CData[cidx].ImgLen);
+                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
+                    bgr_idx = ii - (ii%3-1)*2;                                                  // RGB -> BGR conversion done in the index here
+                    CMNode.Topics.Pub.CameraMono.Msg.data[ii] = CData[cidx].img[bgr_idx];    
+                }
+            }
+
+            /* Camera Info */
+            if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraMonoInfo.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
+                LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraMonoInfo.Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Frame header */
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.header.frame_id    = "Fr_CameraMono";
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.header.stamp       = ros::Time(SimCore.Time);
+
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraMono.Channel;
+
+                /* Extract the image size */
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.height             = CData[cidx].ImgHeight;
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.width              = CData[cidx].ImgWidth;
+
+                /* Set the image distortion model */
+                // TODO: fill these with real data
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.distortion_model   = "plump_bob";
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.D                  = {0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.K                  = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.R                  = {0, 0, 0, 0, 0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.P                  = {1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0};
+
+                /* Set the subsampling values */
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.binning_x          = 1;
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.binning_y          = 1;
+
+                /* Set the region of interest */
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.roi.x_offset       = 0;
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.roi.y_offset       = 0;
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.roi.height         = 0;
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.roi.width          = 0;
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.roi.do_rectify     = false;
             }
         }
 
@@ -1801,6 +1940,42 @@ extern "C" {
             /* Update the coordinate transformation between Fr1 and Fr_CameraStereoR */
             CMNode.Sensor.CameraStereoR.TF.header.stamp = ros::Time(SimCore.Time);
             CMNode.Global.TF_br->sendTransform(CMNode.Sensor.CameraStereoR.TF);
+        }
+
+        /* Publish CameraMono messages */
+        if (CMNode.Sensor.CameraMono.Active) {
+            /* CameraMono Image */
+            auto out_mcam = &CMNode.Topics.Pub.CameraMono;
+
+            if ((rv = CMCRJob_DoJob(out_mcam->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_mcam->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_mcam->Pub.publish(out_mcam->Msg);
+                CMNode.Topics.Pub.CameraMono.Msg.data.clear();
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* CameraMono Info */
+            auto out_mcami = &CMNode.Topics.Pub.CameraMonoInfo;
+
+            if ((rv = CMCRJob_DoJob(out_mcami->Job, CMNode.CycleNoRel, 1, NULL, NULL)) != CMCRJob_RV_DoNothing && rv != CMCRJob_RV_DoSomething) {
+                LogErrF(EC_Sim, "CMNode: Error on DoJob for Job '%s'! rv=%s",CMCRJob_GetName(out_mcami->Job), CMCRJob_RVStr(rv));
+            } else if (rv == CMCRJob_RV_DoSomething) {
+
+                /* Publish message to output */
+                out_mcami->Pub.publish(out_mcami->Msg);
+
+                /* Remember cycle for debugging */
+                CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
+            }
+
+            /* Update the coordinate transformation between Fr1 and Fr_CameraMono */
+            CMNode.Sensor.CameraMono.TF.header.stamp = ros::Time(SimCore.Time);
+            CMNode.Global.TF_br->sendTransform(CMNode.Sensor.CameraMono.TF);
         }
 
         /* Publish vehicle velocity messages */
