@@ -912,7 +912,10 @@ extern "C" {
             /* Build the CameraStereoL frame transformation */
             CMNode.Sensor.CameraStereoL.TF.header.frame_id          = "Fr1";
             CMNode.Sensor.CameraStereoL.TF.child_frame_id           = "Fr_CameraStereoL";
-            q.setRPY(CMNode.Sensor.CameraStereoL.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraStereoL.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraStereoL.rot[2] * DEG_to_RAD);
+            q.setRPY(
+                (CMNode.Sensor.CameraStereoL.rot[0] + 90) * DEG_to_RAD, 
+                (CMNode.Sensor.CameraStereoL.rot[1] + 180) * DEG_to_RAD, 
+                (CMNode.Sensor.CameraStereoL.rot[2] + 90) * DEG_to_RAD);
             CMNode.Sensor.CameraStereoL.TF.transform.rotation.x     = q.x();
             CMNode.Sensor.CameraStereoL.TF.transform.rotation.y     = q.y();
             CMNode.Sensor.CameraStereoL.TF.transform.rotation.z     = q.z();
@@ -966,7 +969,10 @@ extern "C" {
             /* Build the CameraStereoR frame transformation */
             CMNode.Sensor.CameraStereoR.TF.header.frame_id          = "Fr1";
             CMNode.Sensor.CameraStereoR.TF.child_frame_id           = "Fr_CameraStereoR";
-            q.setRPY(CMNode.Sensor.CameraStereoR.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraStereoR.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraStereoR.rot[2] * DEG_to_RAD);
+            q.setRPY(
+                (CMNode.Sensor.CameraStereoR.rot[0] + 90) * DEG_to_RAD, 
+                (CMNode.Sensor.CameraStereoR.rot[1] + 180) * DEG_to_RAD, 
+                (CMNode.Sensor.CameraStereoR.rot[2] + 90) * DEG_to_RAD); 
             CMNode.Sensor.CameraStereoR.TF.transform.rotation.x     = q.x();
             CMNode.Sensor.CameraStereoR.TF.transform.rotation.y     = q.y();
             CMNode.Sensor.CameraStereoR.TF.transform.rotation.z     = q.z();
@@ -1020,7 +1026,10 @@ extern "C" {
             /* Build the CameraMono frame transformation */
             CMNode.Sensor.CameraMono.TF.header.frame_id             = "Fr1";
             CMNode.Sensor.CameraMono.TF.child_frame_id              = "Fr_CameraMono";
-            q.setRPY(CMNode.Sensor.CameraMono.rot[0] * DEG_to_RAD, CMNode.Sensor.CameraMono.rot[1] * DEG_to_RAD, CMNode.Sensor.CameraMono.rot[2] * DEG_to_RAD);
+            q.setRPY(
+                (CMNode.Sensor.CameraMono.rot[0] + 90) * DEG_to_RAD, 
+                (CMNode.Sensor.CameraMono.rot[1] + 180) * DEG_to_RAD, 
+                (CMNode.Sensor.CameraMono.rot[2] + 90) * DEG_to_RAD);            
             CMNode.Sensor.CameraMono.TF.transform.rotation.x        = q.x();
             CMNode.Sensor.CameraMono.TF.transform.rotation.y        = q.y();
             CMNode.Sensor.CameraMono.TF.transform.rotation.z        = q.z();
@@ -1339,6 +1348,7 @@ extern "C" {
         uint8_t *ptr;
         int point_step, row_step;
         int bgr_idx;
+        double maxd;
 
         /* 3D Coordinate system points */
         double x, y, z;
@@ -1496,7 +1506,7 @@ extern "C" {
                 /* Extract the image type */
                 if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
                     CMNode.Topics.Pub.CameraStereoL.Msg.encoding        = "rgb8";
-                    CMNode.Topics.Pub.CameraStereoL.Msg.is_bigendian    = true;
+                    CMNode.Topics.Pub.CameraStereoL.Msg.is_bigendian    = false;
                     CMNode.Topics.Pub.CameraStereoL.Msg.step            = CData[cidx].ImgWidth;
                 }
 
@@ -1526,7 +1536,7 @@ extern "C" {
                 /* Extract the image type */
                 if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
                     CMNode.Topics.Pub.CameraRGB.Msg.encoding            = "rgb8";
-                    CMNode.Topics.Pub.CameraRGB.Msg.is_bigendian        = true;
+                    CMNode.Topics.Pub.CameraRGB.Msg.is_bigendian        = false;
                     CMNode.Topics.Pub.CameraRGB.Msg.step                = CData[cidx].ImgWidth;
                 }
 
@@ -1552,14 +1562,23 @@ extern "C" {
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraInfoL.Msg.height                = CData[cidx].ImgHeight;
                 CMNode.Topics.Pub.CameraInfoL.Msg.width                 = CData[cidx].ImgWidth;
+                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
 
                 /* Set the image distortion model */
-                // TODO: fill these with real data
                 CMNode.Topics.Pub.CameraInfoL.Msg.distortion_model      = "plump_bob";
-                CMNode.Topics.Pub.CameraInfoL.Msg.D                     = {0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoL.Msg.K                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoL.Msg.R                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoL.Msg.P                     = {1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0};
+                CMNode.Topics.Pub.CameraInfoL.Msg.D                     = {1, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoL.Msg.K                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                                                                            0,          0,          1
+                                                                          };
+                CMNode.Topics.Pub.CameraInfoL.Msg.R                     = { 1, 0, 0, 
+                                                                            0, 1, 0, 
+                                                                            0, 0, 1
+                                                                          };
+                CMNode.Topics.Pub.CameraInfoL.Msg.P                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                                                                            0,          0,          1,                                  0
+                                                                          };
 
                 /* Set the subsampling values */
                 CMNode.Topics.Pub.CameraInfoL.Msg.binning_x             = 1;
@@ -1588,13 +1607,23 @@ extern "C" {
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraInfoRGB.Msg.height              = CData[cidx].ImgHeight;
                 CMNode.Topics.Pub.CameraInfoRGB.Msg.width               = CData[cidx].ImgWidth;
+                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
 
                 /* Set the image distortion model */
                 CMNode.Topics.Pub.CameraInfoRGB.Msg.distortion_model    = "plump_bob";
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.D = {0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.K = {1, 0, 1, 0, 1, 1, 0, 0, 1};
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.R = {1, 0, 0, 0, 1, 0, 0, 0, 1};
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.P = {1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0};
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.D                   = {0, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.K                   = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                                                                            0,          0,          1
+                                                                          };
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.R                   = { 1, 0, 0, 
+                                                                            0, 1, 0, 
+                                                                            0, 0, 1
+                                                                          };
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.P                   = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                                                                            0,          0,          1,                                  0
+                                                                          };
 
                 /* Set the subsampling values */
                 CMNode.Topics.Pub.CameraInfoRGB.Msg.binning_x           = 1;
@@ -1630,7 +1659,7 @@ extern "C" {
                 /* Extract the image type */
                 if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
                     CMNode.Topics.Pub.CameraStereoR.Msg.encoding        = "rgb8";
-                    CMNode.Topics.Pub.CameraStereoR.Msg.is_bigendian    = true;
+                    CMNode.Topics.Pub.CameraStereoR.Msg.is_bigendian    = false;
                     CMNode.Topics.Pub.CameraStereoR.Msg.step            = CData[cidx].ImgWidth;
                 }
 
@@ -1656,14 +1685,23 @@ extern "C" {
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraInfoR.Msg.height                = CData[cidx].ImgHeight;
                 CMNode.Topics.Pub.CameraInfoR.Msg.width                 = CData[cidx].ImgWidth;
+                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
 
                 /* Set the image distortion model */
-                // TODO: fill these with real data
                 CMNode.Topics.Pub.CameraInfoR.Msg.distortion_model      = "plump_bob";
-                CMNode.Topics.Pub.CameraInfoR.Msg.D                     = {0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoR.Msg.K                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoR.Msg.R                     = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoR.Msg.P                     = {1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0};
+                CMNode.Topics.Pub.CameraInfoR.Msg.D                     = {1, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoR.Msg.K                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                                                                            0,          0,          1
+                                                                          };
+                CMNode.Topics.Pub.CameraInfoR.Msg.R                     = { 1, 0, 0, 
+                                                                            0, 1, 0, 
+                                                                            0, 0, 1
+                                                                          };
+                CMNode.Topics.Pub.CameraInfoR.Msg.P                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                                                                            0,          0,          1,                                  0
+                                                                          };
 
                 /* Set the subsampling values */
                 CMNode.Topics.Pub.CameraInfoR.Msg.binning_x             = 1;
@@ -1699,7 +1737,7 @@ extern "C" {
                 /* Extract the image type */
                 if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
                     CMNode.Topics.Pub.CameraMono.Msg.encoding           = "bgr8";
-                    CMNode.Topics.Pub.CameraMono.Msg.is_bigendian       = true;
+                    CMNode.Topics.Pub.CameraMono.Msg.is_bigendian       = false;
                     CMNode.Topics.Pub.CameraMono.Msg.step               = CData[cidx].ImgWidth;
                 }
 
@@ -1726,14 +1764,23 @@ extern "C" {
                 /* Extract the image size */
                 CMNode.Topics.Pub.CameraMonoInfo.Msg.height             = CData[cidx].ImgHeight;
                 CMNode.Topics.Pub.CameraMonoInfo.Msg.width              = CData[cidx].ImgWidth;
+                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
 
                 /* Set the image distortion model */
-                // TODO: fill these with real data
                 CMNode.Topics.Pub.CameraMonoInfo.Msg.distortion_model   = "plump_bob";
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.D                  = {0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.K                  = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.R                  = {0, 0, 0, 0, 0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.P                  = {1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 1, 0};
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.D                  = {1, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.K                  = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                                                                            0,          0,          1
+                                                                          };
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.R                  = { 1, 0, 0, 
+                                                                            0, 1, 0, 
+                                                                            0, 0, 1
+                                                                          };
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.P                  = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                                                                            0,          0,          1,                                  0
+                                                                          };
 
                 /* Set the subsampling values */
                 CMNode.Topics.Pub.CameraMonoInfo.Msg.binning_x          = 1;
