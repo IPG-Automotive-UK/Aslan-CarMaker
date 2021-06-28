@@ -889,8 +889,12 @@ extern "C" {
                     idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
                     break;
                 } else {
-                    /* A different CameraRSI was found, increment the channel number */
-                    Channel++;
+                    /* A different CameraRSI was found, increment the channel number if active */
+                    sprintf(sbuf, "Sensor.%d.Active", idxS);
+                    if(iGetIntOpt(Inf_Vhcl, sbuf, 0)) {
+                        Channel++;
+                    }
+                    
                 }
             }
         }
@@ -946,8 +950,11 @@ extern "C" {
                     idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
                     break;
                 } else {
-                    /* A different CameraRSI was found, increment the channel number */
-                    Channel++;
+                    /* A different CameraRSI was found, increment the channel number if active */
+                    sprintf(sbuf, "Sensor.%d.Active", idxS);
+                    if(iGetIntOpt(Inf_Vhcl, sbuf, 0)) {
+                        Channel++;
+                    }
                 }
             }
         }
@@ -1003,8 +1010,11 @@ extern "C" {
                     idxC = iGetIntOpt(Inf_Vhcl, sbuf, 0);
                     break;
                 } else {
-                    /* A different CameraRSI was found, increment the channel number */
-                    Channel++;
+                    /* A different CameraRSI was found, increment the channel number if active */
+                    sprintf(sbuf, "Sensor.%d.Active", idxS);
+                    if(iGetIntOpt(Inf_Vhcl, sbuf, 0)) {
+                        Channel++;
+                    }
                 }
             }
         }

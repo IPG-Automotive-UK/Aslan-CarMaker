@@ -1,6 +1,6 @@
 #INFOFILE1.1 - Do not remove this line!
 FileIdent = CarMaker-TestRun 10
-FileCreator = CarMaker 10.0
+FileCreator = CarMaker 10.0.1
 Description:
 Vehicle = Demo_IPG_CompanyCar
 Trailer =
@@ -78,7 +78,7 @@ ErrorClass.11.Action = abort
 ErrorClass.11.Save = 0
 ErrorClass.11.WarningLimit = 3 5
 Road.FileIdent = IPGRoad 10.0
-Road.LibVersion = 10.0
+Road.LibVersion = 10.0.1
 Road.Country = GBR
 Road.nLinks = 1
 Road.nJunctions = 0
