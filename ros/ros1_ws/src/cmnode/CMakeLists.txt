@@ -15,8 +15,8 @@ endif()
 ###   CarMaker specific   ###
 # - Definitions see <CMInstir>/include/<Makedefs,Makedefs64>
 
-set(CARMAKER_VER 10.0)
-set(CARMAKER_NUMVER 100000)
+set(CARMAKER_VER 10.0.1)
+set(CARMAKER_NUMVER 100001)
 
 set(CARMAKER_DIR $ENV{IPGHOME}/carmaker/linux64-${CARMAKER_VER})
 set(CARMAKER_INC_DIR ${CARMAKER_DIR}/include)

@@ -13,7 +13,7 @@
 #**
 #******************************************************************************
 
-include /opt/ipg/carmaker/linux64-10.0/include/MakeDefs.linux64
+include /opt/ipg/carmaker/linux64-10.0.1/include/MakeDefs.linux64
 
 APP_VER =		"Car_Generic with CMRosIF"
 APP_NAME =		CarMaker.$(ARCH)$(EXE_EXT)

@@ -1,6 +1,6 @@
 #INFOFILE1.1 - Do not remove this line!
 FileIdent = CarMaker-Car 10
-FileCreator = CarMaker 10.0
+FileCreator = CarMaker 10.0.1
 
 
 ## Assembly ##############################################################
@@ -570,7 +570,7 @@ Sensor.Param.5.Name = BASLER
 Sensor.Param.5.Type = CameraRSI
 Sensor.Param.5.File =
 Sensor.Param.5.VIBMode = 0
-Sensor.Param.5.Resolution = 960 480
+Sensor.Param.5.Resolution = 640 480
 Sensor.Param.5.FoV = 60.0
 Sensor.Param.5.CycleTime = 33.0
 Sensor.Param.5.ClippingPlane = 0.1 4000.0
@@ -700,7 +700,7 @@ Sensor.6.pos = 4.5 0.0 0.4
 Sensor.6.Visualization = 1
 Sensor.6.VisColor = 0.0 0.0 0.0
 Sensor.6.Mounting = Fr1A
-Sensor.6.Active = 1
+Sensor.6.Active = 0
 Sensor.6.Ref.Param = 5
 Sensor.6.Ref.Cluster = 2
 Sensor.6.PositionInWindow = 0 0
