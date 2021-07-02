@@ -1,6 +1,6 @@
 #INFOFILE1.1 - Do not remove this line!
 FileIdent = Scenario-Config 1.0
-FileCreator = CarMaker 10.0
+FileCreator = CarMaker 10.0.1
 Scene.Country = GBR
 Scene.Country2 =
 Scene.DrivingSide = right

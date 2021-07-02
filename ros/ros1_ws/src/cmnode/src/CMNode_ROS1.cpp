@@ -1522,9 +1522,11 @@ extern "C" {
 
                 /* Create the output data binary blob */
                 CMNode.Topics.Pub.CameraStereoL.Msg.data.resize(CData[cidx].ImgLen);
-                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
-                    CMNode.Topics.Pub.CameraStereoL.Msg.data[ii] = CData[cidx].img[ii];
-                }
+                ptr = CMNode.Topics.Pub.CameraStereoL.Msg.data.data();
+                memcpy(ptr, CData[cidx].img, CData[cidx].ImgLen);
+                // for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
+                //     CMNode.Topics.Pub.CameraStereoL.Msg.data[ii] = CData[cidx].img[ii];
+                // }
             }
 
             /* CameraStereoRGB Image */
@@ -1552,9 +1554,8 @@ extern "C" {
 
                 /* Create the output data binary blob */
                 CMNode.Topics.Pub.CameraRGB.Msg.data.resize(CData[cidx].ImgLen);
-                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
-                    CMNode.Topics.Pub.CameraRGB.Msg.data[ii] = CData[cidx].img[ii];
-                }
+                ptr = CMNode.Topics.Pub.CameraRGB.Msg.data.data();
+                memcpy(ptr, CData[cidx].img, CData[cidx].ImgLen);
             }
 
             /* CameraStereoL Info */
@@ -1675,9 +1676,8 @@ extern "C" {
 
                 /* Create the output data binary blob */
                 CMNode.Topics.Pub.CameraStereoR.Msg.data.resize(CData[cidx].ImgLen);
-                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
-                    CMNode.Topics.Pub.CameraStereoR.Msg.data[ii] = CData[cidx].img[ii];
-                }
+                ptr = CMNode.Topics.Pub.CameraStereoR.Msg.data.data();
+                memcpy(ptr, CData[cidx].img, CData[cidx].ImgLen);
             }
 
             /* Camera Info */

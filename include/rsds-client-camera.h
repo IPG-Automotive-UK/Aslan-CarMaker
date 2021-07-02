@@ -12,6 +12,8 @@
 ** Raw Signal Data Stream example client for IPGMovie 3.4 and later versions.
 */
 
+#include <stdint.h>
+
 #ifndef __RSDS_CLIENT_H__
 #define __RSDS_CLIENT_H__
 
@@ -28,7 +30,7 @@ struct RSData {
     int     Channel;
     float   SimTime;
     int     ImgLen;
-    char    *img;
+    uint8_t   *img;
 };
 
 extern struct RSData CData[];

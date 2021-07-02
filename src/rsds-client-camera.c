@@ -50,11 +50,6 @@ static struct {
     int   Verbose;    /* Logging Output                     */
 } RSDScfg;
 
-struct {
-    int         nImages;
-    int         nBytes;
-} RSDSIF;
-
 struct RSData CData[MAX_CAM];
 
 #ifdef WIN32
@@ -200,7 +195,7 @@ RSDS_GetData (struct RSData *dt)
                 Log ("%6.3f %d: %8s %dx%d %d\n", SimTime, Channel, ImgType, ImgWidth, ImgHeight, ImgLen);
             
             if (strcmp(ImgType, "rgb") == 0) {
-                char *img = (char *)malloc(ImgLen);
+                uint8_t *img = (uint8_t *)malloc(ImgLen);
                 if (RSDS_ReadChunk(img, ImgLen) != 0) {
                     free(img);
                     return -1;
@@ -219,11 +214,10 @@ RSDS_GetData (struct RSData *dt)
                     Log ("> %s\n", RSDScfg.sbuf);
                     Log ("\n");
                 }
-            free(img);
+                
+                free(img);
             }
         }
-        RSDSIF.nImages++;
-        RSDSIF.nBytes += ImgLen;
     } else {
         Log ("RSDS: not handled: %s\n", RSDScfg.sbuf);
     }
@@ -248,9 +242,6 @@ RSDS_Init (void)
     RSDScfg.MoviePort = 2210;
     RSDScfg.Verbose   = 0;
     RSDScfg.RecvFlags = 0;
-
-    RSDSIF.nImages  = 0;
-    RSDSIF.nBytes   = 0;
 
     #ifdef WIN32
         /* Initialize Semaphore for Thread Synchronisation */
@@ -277,10 +268,6 @@ RSDS_Init (void)
         LogErrF(EC_General, "RSDS: unable to create background thread (returns %d, %s)\n",
                 i, strerror(errno));
     }
-
-    /* Define UAQ's to be used as Interface to CarMaker */
-    DDefInt  (NULL, "RSDS.nImages",  "",  &RSDSIF.nImages,  DVA_None);
-    DDefInt  (NULL, "RSDS.nBytes",   "",  &RSDSIF.nBytes,   DVA_None);
 }
 
 
@@ -344,7 +331,6 @@ static void *
 RSDS_Thread_Func (void *arg)
 {
     int i;
-    //struct RSData *dmy;
 
     /* Wait (blocking) for semaphore */
     #ifdef WIN32
