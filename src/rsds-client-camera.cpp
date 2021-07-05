@@ -42,15 +42,15 @@
 
 
 static struct {
-    char *MovieHost;  /* pc on which IPGMovie runs          */
-    int   MoviePort;  /* TCP/IP port for RSDS               */
-    int   sock;       /* TCP/IP Socket                      */
-    char  sbuf[64];   /* Buffer for transmitted information */
-    int   RecvFlags;  /* Receive Flags                      */
-    int   Verbose;    /* Logging Output                     */
+    const char *MovieHost;  /* pc on which IPGMovie runs          */
+    int         MoviePort;  /* TCP/IP port for RSDS               */
+    int         sock;       /* TCP/IP Socket                      */
+    uint8_t     sbuf[64];   /* Buffer for transmitted information */
+    int         RecvFlags;  /* Receive Flags                      */
+    int         Verbose;    /* Logging Output                     */
 } RSDScfg;
 
-struct RSData CData[MAX_CAM];
+sensor_msgs::Image CData[MAX_CAM];
 
 #ifdef WIN32
   HANDLE rsdsc_thread;
@@ -70,7 +70,7 @@ void PrintEmbeddedData (const char* data, unsigned int dataLen);
 
 
 static int
-RSDS_ReadChunk (char *buf, int count)
+RSDS_ReadChunk (uint8_t *buf, int count)
 {
     int nread = 0, res;
     while (nread < count) {
@@ -113,7 +113,7 @@ static int
 RSDS_RecvHdr (void)
 {
     const int HdrSize = 64;
-    char *hdr = RSDScfg.sbuf;
+    uint8_t *hdr = RSDScfg.sbuf;
     int nSkipped = 0, len = 0, i;
 
     while (1) {
@@ -179,7 +179,7 @@ RSDS_Connect (void)
 ** data and image processing
 */
 int
-RSDS_GetData (struct RSData *dt)
+RSDS_GetData (sensor_msgs::Image *dt)
 {
     /* Variables for Image Processing */
     char    ImgType[64];
@@ -187,7 +187,7 @@ RSDS_GetData (struct RSData *dt)
     float   SimTime;
     int     ImgLen;
 
-    if (sscanf(RSDScfg.sbuf, "*RSDS %d %s %f %dx%d %d", &Channel,
+    if (sscanf((char *)RSDScfg.sbuf, "*RSDS %d %s %f %dx%d %d", &Channel,
     ImgType, &SimTime, &ImgWidth, &ImgHeight, &ImgLen) == 6) {
         
         if (ImgLen > 0) {
@@ -195,19 +195,29 @@ RSDS_GetData (struct RSData *dt)
                 Log ("%6.3f %d: %8s %dx%d %d\n", SimTime, Channel, ImgType, ImgWidth, ImgHeight, ImgLen);
             
             if (strcmp(ImgType, "rgb") == 0) {
-                uint8_t *img = (uint8_t *)malloc(ImgLen);
-                if (RSDS_ReadChunk(img, ImgLen) != 0) {
-                    free(img);
+                //uint8_t *img = (uint8_t *)malloc(ImgLen);
+
+                dt[Channel].height          = ImgHeight;
+                dt[Channel].width           = ImgWidth;
+
+                dt[Channel].encoding        = "rgb8";
+                dt[Channel].is_bigendian    = false;
+                dt[Channel].step            = ImgWidth;
+
+                dt[Channel].data.resize(ImgLen);
+
+                if (RSDS_ReadChunk(dt[Channel].data.data(), ImgLen) != 0) {
+                    //free(img);
                     return -1;
                 }
             
-                strcpy(dt[Channel].ImgType, ImgType);
-                dt[Channel].ImgWidth        = ImgWidth;
-                dt[Channel].ImgHeight       = ImgHeight;
-                dt[Channel].Channel         = Channel;
-                dt[Channel].SimTime         = SimTime;
-                dt[Channel].ImgLen          = ImgLen;
-                dt[Channel].img             = img;
+                // strcpy(dt[Channel].ImgType, ImgType);
+                // dt[Channel].ImgWidth        = ImgWidth;
+                // dt[Channel].ImgHeight       = ImgHeight;
+                // dt[Channel].Channel         = Channel;
+                // dt[Channel].SimTime         = SimTime;
+                // dt[Channel].ImgLen          = ImgLen;
+                // dt[Channel].img             = img;
 
                 if (RSDScfg.Verbose) {
                     /* Print general image information */
@@ -215,7 +225,7 @@ RSDS_GetData (struct RSData *dt)
                     Log ("\n");
                 }
                 
-                free(img);
+                //free(img);
             }
         }
     } else {

@@ -13,6 +13,8 @@
 */
 
 #include <stdint.h>
+#include "sensor_msgs/Image.h"                          /* ROS Image for camera sensor inputs */
+
 
 #ifndef __RSDS_CLIENT_H__
 #define __RSDS_CLIENT_H__
@@ -23,22 +25,12 @@
 extern "C" {
 #endif
 
-struct RSData {
-    char    ImgType[64];
-    int     ImgWidth;
-    int     ImgHeight;
-    int     Channel;
-    float   SimTime;
-    int     ImgLen;
-    uint8_t   *img;
-};
-
-extern struct RSData CData[];
+extern sensor_msgs::Image CData[];
 
 void RSDS_Init  (void);
 void RSDS_Start (void);
 void RSDS_Exit  (void);
-int RSDS_GetData(struct RSData *dt);
+int RSDS_GetData(sensor_msgs::Image *dt);
 
 #ifdef __cplusplus
 }

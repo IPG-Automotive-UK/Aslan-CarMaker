@@ -1356,6 +1356,7 @@ extern "C" {
     {
         int rv;
         uint8_t *ptr;
+        uint8_t tmp;
         int point_step, row_step;
         int bgr_idx;
         double maxd;
@@ -1502,60 +1503,28 @@ extern "C" {
                 LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraStereoL.Job), CMCRJob_RVStr(rv));
             } else if (rv == CMCRJob_RV_DoSomething) {
 
-                /* Frame header */
-                CMNode.Topics.Pub.CameraStereoL.Msg.header.frame_id     = "Fr_CameraStereoL";
-                CMNode.Topics.Pub.CameraStereoL.Msg.header.stamp        = ros::Time(SimCore.Time);
-
                 /* Get the sensor channel number in the RSDS data */
                 int cidx = CMNode.Sensor.CameraStereoL.Channel;
 
-                /* Extract the image size */
-                CMNode.Topics.Pub.CameraStereoL.Msg.height              = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraStereoL.Msg.width               = CData[cidx].ImgWidth;
+                CMNode.Topics.Pub.CameraStereoL.Msg = CData[cidx];
 
-                /* Extract the image type */
-                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
-                    CMNode.Topics.Pub.CameraStereoL.Msg.encoding        = "rgb8";
-                    CMNode.Topics.Pub.CameraStereoL.Msg.is_bigendian    = false;
-                    CMNode.Topics.Pub.CameraStereoL.Msg.step            = CData[cidx].ImgWidth;
-                }
-
-                /* Create the output data binary blob */
-                CMNode.Topics.Pub.CameraStereoL.Msg.data.resize(CData[cidx].ImgLen);
-                ptr = CMNode.Topics.Pub.CameraStereoL.Msg.data.data();
-                memcpy(ptr, CData[cidx].img, CData[cidx].ImgLen);
-                // for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
-                //     CMNode.Topics.Pub.CameraStereoL.Msg.data[ii] = CData[cidx].img[ii];
-                // }
+                /* Frame header */
+                CMNode.Topics.Pub.CameraStereoL.Msg.header.frame_id     = "Fr_CameraStereoL";
+                CMNode.Topics.Pub.CameraStereoL.Msg.header.stamp        = ros::Time(SimCore.Time);
             }
 
             /* CameraStereoRGB Image */
             if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.CameraRGB.Job, CMNode.CycleNoRel, 1, NULL, NULL)) < CMCRJob_RV_OK) {
                 LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraRGB.Job), CMCRJob_RVStr(rv));
             } else if (rv == CMCRJob_RV_DoSomething) {
+                /* Get the sensor channel number in the RSDS data */
+                int cidx = CMNode.Sensor.CameraStereoL.Channel;
+
+                CMNode.Topics.Pub.CameraRGB.Msg = CData[cidx];
 
                 /* Frame header */
                 CMNode.Topics.Pub.CameraRGB.Msg.header.frame_id         = "Fr_CameraStereoL";
                 CMNode.Topics.Pub.CameraRGB.Msg.header.stamp            = ros::Time(SimCore.Time);
-
-                /* Get the sensor channel number in the RSDS data */
-                int cidx = CMNode.Sensor.CameraStereoL.Channel;
-
-                /* Extract the image size */
-                CMNode.Topics.Pub.CameraRGB.Msg.height                  = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraRGB.Msg.width                   = CData[cidx].ImgWidth;
-
-                /* Extract the image type */
-                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
-                    CMNode.Topics.Pub.CameraRGB.Msg.encoding            = "rgb8";
-                    CMNode.Topics.Pub.CameraRGB.Msg.is_bigendian        = false;
-                    CMNode.Topics.Pub.CameraRGB.Msg.step                = CData[cidx].ImgWidth;
-                }
-
-                /* Create the output data binary blob */
-                CMNode.Topics.Pub.CameraRGB.Msg.data.resize(CData[cidx].ImgLen);
-                ptr = CMNode.Topics.Pub.CameraRGB.Msg.data.data();
-                memcpy(ptr, CData[cidx].img, CData[cidx].ImgLen);
             }
 
             /* CameraStereoL Info */
@@ -1571,23 +1540,23 @@ extern "C" {
                 int cidx = CMNode.Sensor.CameraStereoL.Channel;
 
                 /* Extract the image size */
-                CMNode.Topics.Pub.CameraInfoL.Msg.height                = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraInfoL.Msg.width                 = CData[cidx].ImgWidth;
-                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
+                CMNode.Topics.Pub.CameraInfoL.Msg.height                = CData[cidx].height;
+                CMNode.Topics.Pub.CameraInfoL.Msg.width                 = CData[cidx].width;
+                maxd = (double)std::max(CData[cidx].height, CData[cidx].width);
 
                 /* Set the image distortion model */
                 CMNode.Topics.Pub.CameraInfoL.Msg.distortion_model      = "plump_bob";
                 CMNode.Topics.Pub.CameraInfoL.Msg.D                     = {1, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoL.Msg.K                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                CMNode.Topics.Pub.CameraInfoL.Msg.K                     = { maxd*7/8,   0,          (double)CData[cidx].width/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].height/2, 
                                                                             0,          0,          1
                                                                           };
                 CMNode.Topics.Pub.CameraInfoL.Msg.R                     = { 1, 0, 0, 
                                                                             0, 1, 0, 
                                                                             0, 0, 1
                                                                           };
-                CMNode.Topics.Pub.CameraInfoL.Msg.P                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                CMNode.Topics.Pub.CameraInfoL.Msg.P                     = { maxd*7/8,   0,          (double)(CData[cidx].width)/2,      0, 
+                                                                            0,          maxd*7/8,   (double)(CData[cidx].height)/2,     0, 
                                                                             0,          0,          1,                                  0
                                                                           };
 
@@ -1616,23 +1585,23 @@ extern "C" {
                 int cidx = CMNode.Sensor.CameraStereoL.Channel;
 
                 /* Extract the image size */
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.height              = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.width               = CData[cidx].ImgWidth;
-                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.height                = CData[cidx].height;
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.width                 = CData[cidx].width;
+                maxd = (double)std::max(CData[cidx].height, CData[cidx].width);
 
                 /* Set the image distortion model */
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.distortion_model    = "plump_bob";
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.D                   = {0, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.K                   = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.distortion_model      = "plump_bob";
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.D                     = {1, 0, 0, 0, 0};
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.K                     = { maxd*7/8,   0,        (double)CData[cidx].width/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].height/2, 
                                                                             0,          0,          1
                                                                           };
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.R                   = { 1, 0, 0, 
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.R                     = { 1, 0, 0, 
                                                                             0, 1, 0, 
                                                                             0, 0, 1
                                                                           };
-                CMNode.Topics.Pub.CameraInfoRGB.Msg.P                   = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                CMNode.Topics.Pub.CameraInfoRGB.Msg.P                     = { maxd*7/8,   0,        (double)(CData[cidx].width)/2,      0, 
+                                                                            0,          maxd*7/8,   (double)(CData[cidx].height)/2,     0, 
                                                                             0,          0,          1,                                  0
                                                                           };
 
@@ -1656,28 +1625,14 @@ extern "C" {
                 LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraStereoR.Job), CMCRJob_RVStr(rv));
             } else if (rv == CMCRJob_RV_DoSomething) {
 
-                /* Frame header */
-                CMNode.Topics.Pub.CameraStereoR.Msg.header.frame_id     = "Fr_CameraStereoR";
-                CMNode.Topics.Pub.CameraStereoR.Msg.header.stamp        = ros::Time(SimCore.Time);
-
                 /* Get the sensor channel number in the RSDS data */
                 int cidx = CMNode.Sensor.CameraStereoR.Channel;
 
-                /* Extract the image size */
-                CMNode.Topics.Pub.CameraStereoR.Msg.height              = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraStereoR.Msg.width               = CData[cidx].ImgWidth;
-
-                /* Extract the image type */
-                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
-                    CMNode.Topics.Pub.CameraStereoR.Msg.encoding        = "rgb8";
-                    CMNode.Topics.Pub.CameraStereoR.Msg.is_bigendian    = false;
-                    CMNode.Topics.Pub.CameraStereoR.Msg.step            = CData[cidx].ImgWidth;
-                }
-
-                /* Create the output data binary blob */
-                CMNode.Topics.Pub.CameraStereoR.Msg.data.resize(CData[cidx].ImgLen);
-                ptr = CMNode.Topics.Pub.CameraStereoR.Msg.data.data();
-                memcpy(ptr, CData[cidx].img, CData[cidx].ImgLen);
+                CMNode.Topics.Pub.CameraStereoR.Msg = CData[cidx];
+                
+                /* Frame header */
+                CMNode.Topics.Pub.CameraStereoR.Msg.header.frame_id     = "Fr_CameraStereoR";
+                CMNode.Topics.Pub.CameraStereoR.Msg.header.stamp        = ros::Time(SimCore.Time);
             }
 
             /* Camera Info */
@@ -1693,23 +1648,23 @@ extern "C" {
                 int cidx = CMNode.Sensor.CameraStereoR.Channel;
 
                 /* Extract the image size */
-                CMNode.Topics.Pub.CameraInfoR.Msg.height                = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraInfoR.Msg.width                 = CData[cidx].ImgWidth;
-                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
+                CMNode.Topics.Pub.CameraInfoR.Msg.height                = CData[cidx].height;
+                CMNode.Topics.Pub.CameraInfoR.Msg.width                 = CData[cidx].width;
+                maxd = (double)std::max(CData[cidx].height, CData[cidx].width);
 
                 /* Set the image distortion model */
                 CMNode.Topics.Pub.CameraInfoR.Msg.distortion_model      = "plump_bob";
                 CMNode.Topics.Pub.CameraInfoR.Msg.D                     = {1, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraInfoR.Msg.K                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                CMNode.Topics.Pub.CameraInfoR.Msg.K                     = { maxd*7/8,   0,          (double)CData[cidx].width/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].height/2, 
                                                                             0,          0,          1
                                                                           };
                 CMNode.Topics.Pub.CameraInfoR.Msg.R                     = { 1, 0, 0, 
                                                                             0, 1, 0, 
                                                                             0, 0, 1
                                                                           };
-                CMNode.Topics.Pub.CameraInfoR.Msg.P                     = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                CMNode.Topics.Pub.CameraInfoR.Msg.P                     = { maxd*7/8,   0,          (double)(CData[cidx].width)/2,      0, 
+                                                                            0,          maxd*7/8,   (double)(CData[cidx].height)/2,     0, 
                                                                             0,          0,          1,                                  0
                                                                           };
 
@@ -1733,30 +1688,25 @@ extern "C" {
                 LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.CameraMono.Job), CMCRJob_RVStr(rv));
             } else if (rv == CMCRJob_RV_DoSomething) {
 
-                /* Frame header */
-                CMNode.Topics.Pub.CameraMono.Msg.header.frame_id        = "Fr_CameraMono";
-                CMNode.Topics.Pub.CameraMono.Msg.header.stamp           = ros::Time(SimCore.Time);
-
                 /* Get the sensor channel number in the RSDS data */
                 int cidx = CMNode.Sensor.CameraMono.Channel;
 
-                /* Extract the image size */
-                CMNode.Topics.Pub.CameraMono.Msg.height                 = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraMono.Msg.width                  = CData[cidx].ImgWidth;
+                CData[cidx].encoding = "bgr8";
+                CMNode.Topics.Pub.CameraMono.Msg = CData[cidx];
 
-                /* Extract the image type */
-                if (strcmp(CData[cidx].ImgType, "rgb") == 0) {
-                    CMNode.Topics.Pub.CameraMono.Msg.encoding           = "bgr8";
-                    CMNode.Topics.Pub.CameraMono.Msg.is_bigendian       = false;
-                    CMNode.Topics.Pub.CameraMono.Msg.step               = CData[cidx].ImgWidth;
+                int imsize = CData[cidx].width*CData[cidx].height;
+                ptr = CMNode.Topics.Pub.CameraMono.Msg.data.data();
+                for (int ii = 0; ii < imsize; ii++) {
+                    /* Convert from RGB to BGR data */
+                    tmp         = *ptr;
+                    *(ptr)      = *(ptr+2);
+                    *(ptr+2)    = tmp;
+                    ptr += 3;
                 }
-
-                /* Create the output data binary blob */
-                CMNode.Topics.Pub.CameraMono.Msg.data.resize(CData[cidx].ImgLen);
-                for (int ii = 0; ii < CData[cidx].ImgLen; ii++) {
-                    bgr_idx = ii - (ii%3-1)*2;                                                  // RGB -> BGR conversion done in the index here
-                    CMNode.Topics.Pub.CameraMono.Msg.data[ii] = CData[cidx].img[bgr_idx];    
-                }
+                
+                /* Frame header */
+                CMNode.Topics.Pub.CameraMono.Msg.header.frame_id        = "Fr_CameraMono";
+                CMNode.Topics.Pub.CameraMono.Msg.header.stamp           = ros::Time(SimCore.Time);
             }
 
             /* Camera Info */
@@ -1772,23 +1722,23 @@ extern "C" {
                 int cidx = CMNode.Sensor.CameraMono.Channel;
 
                 /* Extract the image size */
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.height             = CData[cidx].ImgHeight;
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.width              = CData[cidx].ImgWidth;
-                maxd = (double)std::max(CData[cidx].ImgHeight, CData[cidx].ImgWidth);
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.height             = CData[cidx].height;
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.width              = CData[cidx].width;
+                maxd = (double)std::max(CData[cidx].height, CData[cidx].width);
 
                 /* Set the image distortion model */
                 CMNode.Topics.Pub.CameraMonoInfo.Msg.distortion_model   = "plump_bob";
                 CMNode.Topics.Pub.CameraMonoInfo.Msg.D                  = {1, 0, 0, 0, 0};
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.K                  = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2, 
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.K                  = { maxd*7/8,   0,          (double)CData[cidx].width/2, 
+                                                                            0,          maxd*7/8,   (double)CData[cidx].height/2, 
                                                                             0,          0,          1
                                                                           };
                 CMNode.Topics.Pub.CameraMonoInfo.Msg.R                  = { 1, 0, 0, 
                                                                             0, 1, 0, 
                                                                             0, 0, 1
                                                                           };
-                CMNode.Topics.Pub.CameraMonoInfo.Msg.P                  = { maxd*7/8,   0,          (double)CData[cidx].ImgWidth/2,     0, 
-                                                                            0,          maxd*7/8,   (double)CData[cidx].ImgHeight/2,    0, 
+                CMNode.Topics.Pub.CameraMonoInfo.Msg.P                  = { maxd*7/8,   0,          (double)(CData[cidx].width)/2,      0, 
+                                                                            0,          maxd*7/8,   (double)(CData[cidx].height)/2,     0, 
                                                                             0,          0,          1,                                  0
                                                                           };
 
@@ -1913,7 +1863,7 @@ extern "C" {
 
                 /* Publish message to output */
                 out_scaml->Pub.publish(out_scaml->Msg);
-                CMNode.Topics.Pub.CameraStereoL.Msg.data.clear();
+                //CMNode.Topics.Pub.CameraStereoL.Msg.data.clear();
 
                 /* Remember cycle for debugging */
                 CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
@@ -1942,7 +1892,7 @@ extern "C" {
 
                 /* Publish message to output */
                 out_rgbcam->Pub.publish(out_rgbcam->Msg);
-                CMNode.Topics.Pub.CameraRGB.Msg.data.clear();
+                //CMNode.Topics.Pub.CameraRGB.Msg.data.clear();
 
                 /* Remember cycle for debugging */
                 CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
@@ -1978,7 +1928,7 @@ extern "C" {
 
                 /* Publish message to output */
                 out_scamr->Pub.publish(out_scamr->Msg);
-                CMNode.Topics.Pub.CameraStereoR.Msg.data.clear();
+                //CMNode.Topics.Pub.CameraStereoR.Msg.data.clear();
 
                 /* Remember cycle for debugging */
                 CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
@@ -2014,7 +1964,7 @@ extern "C" {
 
                 /* Publish message to output */
                 out_mcam->Pub.publish(out_mcam->Msg);
-                CMNode.Topics.Pub.CameraMono.Msg.data.clear();
+                //CMNode.Topics.Pub.CameraMono.Msg.data.clear();
 
                 /* Remember cycle for debugging */
                 CMNode.Model.CycleLastOut = CMNode.CycleNoRel;

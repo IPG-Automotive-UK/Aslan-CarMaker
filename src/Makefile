@@ -29,8 +29,9 @@ DEF_CFLAGS      += -DWITH_CMROSIF
 LD_LIBS_OS      += -lCMRosIF-$(ARCH)
 LDFLAGS         += -L./../lib/
 LDFLAGS         += -Wl,-rpath,'$$ORIGIN/../lib/'
-INC_CFLAGS      += -I../include
+INC_CFLAGS      += -I../include -I/opt/ros/ros1/include
 CFLAGS          += -rdynamic
+CXXFLAGS          += -rdynamic
 
 # Prepend local include/library directory to include path:
 # PREINC_CFLAGS +=		-I../include -I../lib/$(ARCH) -I../lib
@@ -55,7 +56,7 @@ CFLAGS          += -rdynamic
 default:	clean $(APP_NAME) install_cp
 $(APP_NAME):	$(OBJS_$(ARCH)) $(OBJS) $(LD_LIBS_MK) app_tmp.o
 	$(QECHO) " LD     $@"
-	$Q $(CC) $(CFLAGS) $(LDFLAGS) -o $@ \
+	$Q $(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ \
 		$(OBJS_$(ARCH)) $(OBJS) $(LD_LIBS) $(LD_LIBS_OS) \
 		app_tmp.o
 	$(SET_EXE_PERMISSIONS) $@
@@ -84,5 +85,5 @@ app_tmp.c: Makefile $(OBJS_$(ARCH)) $(OBJS) $(LD_LIBS_MK)
 depend .depend: Makefile
 	$(QECHO) " MK     $@"
 	$Q-$(CC)  $(CFLAGS)   $(DEPCFLAGS)   *.c   >  .depend 2>/dev/null
-#	$Q-$(CXX) $(CXXFLAGS) $(DEPCXXFLAGS) *.cpp >> .depend 2>/dev/null
+	$Q-$(CXX) $(CXXFLAGS) $(DEPCXXFLAGS) *.cpp >> .depend 2>/dev/null
 include .depend
