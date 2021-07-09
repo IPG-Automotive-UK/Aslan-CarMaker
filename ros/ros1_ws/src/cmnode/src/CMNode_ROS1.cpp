@@ -2015,7 +2015,7 @@ extern "C" {
         CMNode.Vhcl.TF.transform.rotation.y = q.y();
         CMNode.Vhcl.TF.transform.rotation.z = q.z();
         CMNode.Vhcl.TF.transform.rotation.w = q.w();
-        CMNode.Global.TF_br->sendTransform(CMNode.Vhcl.TF);
+        // CMNode.Global.TF_br->sendTransform(CMNode.Vhcl.TF);
 
         /* Publish "/clock" topic after all other other topics are published
         * - Is the order of arrival in other node identical? */
