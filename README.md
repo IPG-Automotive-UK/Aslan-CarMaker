@@ -1,6 +1,8 @@
 # Aslan-CarMaker
 
-Integration of CarMaker with project ASLAN, open-source autonomous software for low-speed applications.
+Integration of CarMaker with project [ASLAN](https://www.project-aslan.org/), open-source autonomous software for low-speed applications.
+
+The project ASLAN code and documentation lives on the [ASLAN Github](https://github.com/project-aslan/Aslan/tree/melodic). The code is integrated into this project as a submodule.
 
 ## Requirements
 
@@ -15,7 +17,7 @@ Integration of CarMaker with project ASLAN, open-source autonomous software for 
 
 ### ROS
 
-- Follow the installation instructions on the [ROS Wiki](http://wiki.ros.org/melodic/Installation/Ubuntu)
+- Follow the ROS installation instructions from step 2 in the [ASLAN setup documentation](https://github.com/project-aslan/Aslan/tree/melodic#2-install-ros-melodic-desktop-full)
 - By default ROS installation is located in "/opt/ros/"
 - Create symbolic link "/opt/ros/ros1" that points to e.g. "/opt/ros/melodic"
   - e.g. “cd /opt/ros; sudo ln -sfn melodic ros1”
@@ -72,6 +74,25 @@ For convenience, Project Aslan is included as a submodule of this repository. To
 git clone --branch melodic --recurse-submodules https://github.com/IPG-Automotive-UK/Aslan-CarMaker.git
 ```
 
+#### Project Setup
+
+The project includes a number of executable scripts that are used in the building and starting of the project. The appropriate permissions need to be given to all these script to allow them to run as executables. This only needs to be done once after cloning the project.
+
+```bash
+cd Aslan-CarMaker
+chmod +x CMStart.sh
+chmod +x build_cmrosif.sh
+chmod +x ros/ros1_ws/build.sh
+```
+
+There are additional dependencies that project ASLAN requires that may need to be installed at this stage. This step also needs to be done only once after the project is cloned unless new dependencies are added in the future.
+
+```bash
+cd ros/Aslan
+rosdep install -y --from-paths src --ignore-src --rosdistro melodic
+cd ../..
+```
+
 #### Change CarMaker Version (optional)
 
 To compile and use a different CarMaker 10 version other than 10.0, several changes to the code need to be made. These changes are described here and must be made before the project is built. All paths below are relative to the project root folder.
@@ -82,15 +103,7 @@ To compile and use a different CarMaker 10 version other than 10.0, several chan
 
 #### Build Project
 
-A build script `build_cmrosif.sh` is included in this project that must be run before use. It can be found in the top directory of the project. Ensure that the appropriate permission has been given to the script to run as an executable, as well as the `ros/ros1_ws/build.sh` that builds the CarMaker node itself.
-
-```bash
-cd Aslan-CarMaker
-chmod +x build_cmrosif.sh
-chmod +x ros/ros1_ws/build.sh
-```
-
-You only need to do this once, after which the script can be executed from the terminal:
+A build script `build_cmrosif.sh` is included in this project that must be run before use. It can be found in the top directory of the project. The build script can be executed from the terminal:
 
 ```bash
 ./build_cmrosif.sh
@@ -98,21 +111,41 @@ You only need to do this once, after which the script can be executed from the t
 
 The script concurrently performs 3 build actions:
 
-1. Build the Aslan catkin workspace
+1. Build the ASLAN catkin workspace
 2. Build the CarMaker ROS node workspace
 3. Build the custom CarMaker executable for the project
+
+Any modifications to the project source code or to the ASLAN source code require a rebuilding of the project.
 
 ## Status
 
 ### LiDAR RSI
 
-The Aslan-CarMaker implementation can currently support at most one LiDAR RSI unit. Only the first LiDAR on the CarMaker vehicle is transmitted to Aslan. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
+The Aslan-CarMaker implementation can currently support at most one LiDAR RSI unit. Only the first LiDAR on the CarMaker vehicle is transmitted over ROS. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
 
 CarMaker has no user-friendly method to implement a rotating LiDAR at the moment. All sensors in CarMaker could be rotated and moved with explicit commands during the simulation. This can best be done in the underlying C code of the CarMaker ROS node implementation in the future. At the moment, a rotating LiDAR can also be effectively implemented by setting the sensor's field of view to 360°. We recommend this approach as the incoming data would be equivalent to a full cycle of a physical rotating LiDAR unit.
 
 ### RADAR RSI
 
-The Aslan-CarMaker implementation can currently support at most one RADAR RSI unit. Only the first RADAR on the CarMaker vehicle is transmitted to Aslan. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
+The Aslan-CarMaker implementation can currently support at most one RADAR RSI unit. Only the first RADAR on the CarMaker vehicle is transmitted over ROS. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
+
+### Camera RSI
+
+The Aslan-CarMaker implementation can currently support at most three Camera RSI sensors. Two of these sensors represent a left/right ZED stereo camera. The third sensor represents a single mono Basler Ace camera. Adding more than three cameras to the CarMaker test run will only slow down the simulation as the additional sensors will not be published on ROS.
+
+Every camera added by the user needs to be assigned to a specific ASLAN-specific camera type. This has to be done in the CarMaker ROS interface additional parameters in the Extras menu.
+
+<p align="center">
+<img src="doc/Images/ROS_parameters.png">
+</p>
+
+The ROS interface parameters are contained in an additional text file. A dedicated section inside describes how to assign a camera to a specific type by name. The names of the cameras assigned in the text file need to match exactly the names assigned to the cameras in the Assembly > Sensor Mountings section of the Vehicle Data Set parameters. A mismatch in names will lead to a camera not being published on ROS.
+
+<p align="center">
+<img src="doc/Images/Camera_assign.png">
+</p>
+
+The user is free to add any number of cameras up to three. It is even possible to add only half of the stereo camera and use it as a mono.
 
 ### Global Navigation System
 
@@ -130,13 +163,7 @@ This is the main documentation that describes the higher level functionality and
 
 ### Start CarMaker
 
-To start CarMaker, use the custom script that is found in the root folder of this project. Before running it for the first time, set the script permissions to allow it to run as executable.
-
-```bash
-chmod +x CMStart.sh
-```
-
-You can now run the script which will start CarMaker:
+To start CarMaker, use the custom script that is found in the root folder of this project.
 
 ```bash
 ./CMStart.sh
