@@ -146,7 +146,6 @@ static struct {
 
     struct {
         int                 MaxSteerAng;        /*!< Maximum steering angle of the vehicle */
-        geometry_msgs::TransformStamped TF;     /*!< ROS Reference frame */
     } Vhcl; /*!< Vehicle parameters */
 
     struct {
@@ -392,7 +391,7 @@ extern "C" {
         }
 
         /* NavSatFix pub */
-        strcpy(sbuf, "/sd_current_GPS");
+        strcpy(sbuf, "/carmaker_gps");
         LOG("  -> Publish '%s'", sbuf);
         CMNode.Topics.Pub.GPS.Pub           = node->advertise<sensor_msgs::NavSatFix>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
         CMNode.Topics.Pub.GPS.Job           = CMCRJob_Create("NavSatFix");
@@ -458,7 +457,7 @@ extern "C" {
         CMNode.Topics.Pub.CameraMonoInfo.Job = CMCRJob_Create("CAMERA_INFO_M");
 
         /* Vehicle Velocity pub */
-        strcpy(sbuf, "/current_velocity");
+        strcpy(sbuf, "/current_velocity_cm");
         LOG("  -> Publish '%s'", sbuf);
         CMNode.Topics.Pub.Velocity.Pub      = node->advertise<geometry_msgs::TwistStamped>(sbuf, static_cast<uint>(CMNode.Cfg.QueuePub));
         CMNode.Topics.Pub.Velocity.Job      = CMCRJob_Create("Velocity");
@@ -1379,7 +1378,7 @@ extern "C" {
             if ((rv = CMCRJob_DoPrep(CMNode.Topics.Pub.GPS.Job, CMNode.CycleNoRel, 1, nullptr, nullptr)) < CMCRJob_RV_OK) {
                 LogErrF(EC_Sim, "CMNode: Error on DoPrep for Job '%s'! rv=%s", CMCRJob_GetName(CMNode.Topics.Pub.GPS.Job), CMCRJob_RVStr(rv));
             } else if (rv == CMCRJob_RV_DoSomething) {
-                CMNode.Topics.Pub.GPS.Msg.header.frame_id = "Fr0";
+                CMNode.Topics.Pub.GPS.Msg.header.frame_id = "Fr1";
                 CMNode.Topics.Pub.GPS.Msg.header.stamp = ros::Time(SimCore.Time);
 
                 CMNode.Topics.Pub.GPS.Msg.status.status = 0;    /* Augmentation fix not available in CarMaker */
@@ -2002,20 +2001,6 @@ extern "C" {
             /* Remember cycle for debugging */
             CMNode.Model.CycleLastOut = CMNode.CycleNoRel;
         }
-
-        /* Update the coordinate transformation between Fr0 and Fr1 */
-        CMNode.Vhcl.TF.header.stamp = ros::Time(SimCore.Time);
-        CMNode.Vhcl.TF.header.frame_id = "Fr0";
-        CMNode.Vhcl.TF.child_frame_id = "Fr1";
-        CMNode.Vhcl.TF.transform.translation.x = Car.Fr1.t_0[0];
-        CMNode.Vhcl.TF.transform.translation.y = Car.Fr1.t_0[1];
-        CMNode.Vhcl.TF.transform.translation.z = Car.Fr1.t_0[2];
-        q.setRPY(Car.Fr1.r_zyx[0], Car.Fr1.r_zyx[1], Car.Fr1.r_zyx[2]);
-        CMNode.Vhcl.TF.transform.rotation.x = q.x();
-        CMNode.Vhcl.TF.transform.rotation.y = q.y();
-        CMNode.Vhcl.TF.transform.rotation.z = q.z();
-        CMNode.Vhcl.TF.transform.rotation.w = q.w();
-        // CMNode.Global.TF_br->sendTransform(CMNode.Vhcl.TF);
 
         /* Publish "/clock" topic after all other other topics are published
         * - Is the order of arrival in other node identical? */
