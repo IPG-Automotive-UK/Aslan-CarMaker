@@ -157,7 +157,7 @@ A simplified translator is implemented that converts Aslan vehicle control reque
 
 ### Documentation
 
-This is the main documentation that describes the higher level functionality and state of the Aslan-CarMaker implementation. The backbone of this project on the CarMaker side is a publicly available project which implements a basic ROS node inside CarMaker and synchronises it with a simple external ROS node. The example project is available in the [FAQ section](https://ipg-automotive.com/support/client-area/faq/ticket/how-can-i-use-carmaker-with-ros/) of the IPG Client Area. The documentation of the original example can still be found in the doc/ folder of this project. A lot of the information inside the documentation is not applicable to this specific project but users can still find it to be a really useful aid and source of knowledge. Specifically note that any work on node synchronisation based on a specific incoming message has been removed from the current implementation.
+This is the main documentation that describes the higher level functionality and state of the Aslan-CarMaker implementation. The backbone of this project on the CarMaker side is a publicly available project which implements a basic ROS node inside CarMaker and synchronises it with a simple external ROS node. The example project is available in the [FAQ section](https://ipg-automotive.com/support/client-area/faq/ticket/how-can-i-use-carmaker-with-ros/) of the IPG Client Area. The documentation of the original example can still be found in the `doc/` folder of this project. A lot of the information inside the documentation is not applicable to this specific project but users can still find it to be a really useful aid and source of knowledge. Specifically note that any work on node synchronisation based on a specific incoming message has been removed from the current implementation.
 
 ## Usage
 
@@ -174,16 +174,48 @@ By using this script, you ensure that:
 1. The appropriate ROS workspace files are sourced.
 2. The CarMaker GUI starts with the additional dedicated ROS navigation menu.
 
-Once the CarMaker main GUI has started, you must ensure that the project compiled executable is used instead of the default one. Go to "CM Main GUI -> Application -> Configuration / Status" and in the "Command (executable)" field select "bin/CarMaker.linux64".
+### Start Project
+
+CarMaker always starts by re-opening the project which was used in the previous session. The first time the user wants to start the Aslan-CarMaker work, they have to load the project manually. This is done through the `CM Main GUI > File > Project Folder > Select...` menu.
+
+<p align="center">
+<img src="doc/Images/Load_Project.png">
+</p>
+
+The current Github repository is also the top level of a complete CarMaker project. Navigate to the folder that contains the local cloned copy and press OK. This is also the folder that contains the `CMStart.sh` start script that was just launched. Next time CarMaker is started, this step can be skipped as long as this project was the last loaded one in the previous session.
+
+Once the CarMaker main GUI has started and the desired project is loaded, you must ensure that the project compiled executable is used instead of the default one. Go to `CM Main GUI > Application > Configuration/Status` and in the `Command (executable)` field select `bin/CarMaker.linux64`.
 
 <p align="center">
 <img src="doc/Images/Application_Configuration.png">
 </p>
 
+This is the custom executable that is created for CarMaker during the build process. It contains not just the basic CarMaker binaries, but also the libraries needed to enable communication between CarMaker and ROS. If this step is not properly executed, any attempt to communicate from CarMaker over ROS would fail.
+
 ### Start Aslan
 
-The Project Aslan startup process is accessible through the "CM Main GUI -> Extras -> CMRosIF -> Launch" or "CM Main GUI -> Extras -> CMRosIF -> Launch & Start Application" menu. The second option has the added step of connecting to the custom CarMaker executable once Project Aslan has started.
+The Project Aslan startup process is accessible through the `CM Main GUI > Extras > CMRosIF > Launch` or `Extras > CMRosIF > Launch & Start Application` menu. The second option has the added step of connecting to the custom CarMaker executable once Project ASLAN has started.
 
 <p align="center">
 <img src="doc/Images/Launch_Aslan.png">
 </p>
+
+Please note that this step is added in the GUI only for convenience. If you would like greater control over how ASLAN starts, you can run the launch script from the terminal and add any flags or options that are appropriate:
+
+```bash
+./ros/Aslan/run
+```
+
+The command above assumes you are in the top level folder of the project.
+
+Whether project ASLAN is started from the terminal or from the CarMaker GUI, using its start script is important and convenient as it also launches a `roscore` node. Thus the user does not need to worry about starting a master node manually.
+
+### Select Testrun
+
+A testrun defines a complete CarMaker simulation. It consists of the scenario (including traffic), the ego vehicle, as well as the maneuver that the vehicle will execute. For a new CarMaker user, it might be recommended to start with the example testrun that is included in the project. Open it through the `CM Main GUI > File > Open...` menu. The example testrun is called `OpenWorld`.
+
+<p align="center">
+<img src="doc/Images/Open_Testrun.png">
+</p>
+
+The example includes all sensors and functionality that is supported by the project at any given point. Some of the sensors may be disabled, but they are defined and mounted on the vehicle.
