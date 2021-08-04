@@ -71,7 +71,7 @@ cd ~/CM_Projects/CM_10
 For convenience, Project Aslan is included as a submodule of this repository. To ensure that all project components are in the correct place where the build scripts expect them, clone the Aslan-CarMaker git along with its submodules:
 
 ```bash
-git clone --branch melodic --recurse-submodules https://github.com/IPG-Automotive-UK/Aslan-CarMaker.git
+git clone --branch main --recurse-submodules https://github.com/IPG-Automotive-UK/Aslan-CarMaker.git
 ```
 
 #### Project Setup
