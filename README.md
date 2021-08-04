@@ -89,6 +89,7 @@ There are additional dependencies that project ASLAN requires that may need to b
 
 ```bash
 cd ros/Aslan
+rosdep update
 rosdep install -y --from-paths src --ignore-src --rosdistro melodic
 cd ../..
 ```
