@@ -173,48 +173,6 @@ The script concurrently performs 3 build actions:
 
 Any modifications to the project source code or to the ASLAN source code require a rebuilding of the project.
 
-## Status
-
-### LiDAR RSI
-
-The Aslan-CarMaker implementation can currently support at most one LiDAR RSI unit. Only the first LiDAR on the CarMaker vehicle is transmitted over ROS. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
-
-CarMaker has no user-friendly method to implement a rotating LiDAR at the moment. All sensors in CarMaker could be rotated and moved with explicit commands during the simulation. This can best be done in the underlying C code of the CarMaker ROS node implementation in the future. At the moment, a rotating LiDAR can also be effectively implemented by setting the sensor's field of view to 360°. We recommend this approach as the incoming data would be equivalent to a full cycle of a physical rotating LiDAR unit.
-
-### RADAR RSI
-
-The Aslan-CarMaker implementation can currently support at most one RADAR RSI unit. Only the first RADAR on the CarMaker vehicle is transmitted over ROS. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
-
-### Camera RSI
-
-The Aslan-CarMaker implementation can currently support at most three Camera RSI sensors. Two of these sensors represent a left/right ZED stereo camera. The third sensor represents a single mono Basler Ace camera. Adding more than three cameras to the CarMaker test run will only slow down the simulation as the additional sensors will not be published on ROS.
-
-Every camera added by the user needs to be assigned to a specific ASLAN-specific camera type. This has to be done in the CarMaker ROS interface additional parameters in the Extras menu.
-
-<p align="center">
-<img src="doc/Images/ROS_parameters.png">
-</p>
-
-The ROS interface parameters are contained in an additional text file. A dedicated section inside describes how to assign a camera to a specific type by name. The names of the cameras assigned in the text file need to match exactly the names assigned to the cameras in the Assembly > Sensor Mountings section of the Vehicle Data Set parameters. A mismatch in names will lead to a camera not being published on ROS.
-
-<p align="center">
-<img src="doc/Images/Camera_assign.png">
-</p>
-
-The user is free to add any number of cameras up to three. It is even possible to add only half of the stereo camera and use it as a mono.
-
-### Global Navigation System
-
-A Global Navigation sensor in CarMaker can be used to simulate a physical GPS mounted on the ego vehicle. A few prerequisites need to be met to simulate a GPS system in CarMaker. They are described in detail in Section 20.14 of the CarMaker Reference Manual. In summary, the IPG Scenario that is currently running must have realistic set values for the latitude and longitude of the scenario origin. The actual date and time of the simulation need to be set in the Misc. section of the Environment parameters in CarMaker. For the chosen date of the simulation, the appropriate navigation message files must be downloaded from [NASA's archives](https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/broadcast_ephemeris_data.html).
-
-### Vehicle Control
-
-A simplified translator is implemented that converts Aslan vehicle control requests to CarMaker vehicle control signals. Currently these translators are linear and bypass any complex non-linear steering, gas pedal, and brake pedal parameters from the CarMaker vehicle model. Aslan sends a normalised torque request and/or steering request to CarMaker which gets linearly mapped to brake pedal position, gas pedal position, and steering wheel angle.
-
-### Documentation
-
-This is the main documentation that describes the higher level functionality and state of the Aslan-CarMaker implementation. The backbone of this project on the CarMaker side is a publicly available project which implements a basic ROS node inside CarMaker and synchronises it with a simple external ROS node. The example project is available in the [FAQ section](https://ipg-automotive.com/support/client-area/faq/ticket/how-can-i-use-carmaker-with-ros/) of the IPG Client Area. The documentation of the original example can still be found in the `doc/` folder of this project. A lot of the information inside the documentation is not applicable to this specific project but users can still find it to be a really useful aid and source of knowledge. Specifically note that any work on node synchronisation based on a specific incoming message has been removed from the current implementation.
-
 ## Usage
 
 ### Start CarMaker
@@ -275,3 +233,45 @@ A testrun defines a complete CarMaker simulation. It consists of the scenario (i
 </p>
 
 The example includes all sensors and functionality that is supported by the project at any given point. Some of the sensors may be disabled, but they are defined and mounted on the vehicle.
+
+## Status
+
+### LiDAR RSI
+
+The Aslan-CarMaker implementation can currently support at most one LiDAR RSI unit. Only the first LiDAR on the CarMaker vehicle is transmitted over ROS. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
+
+CarMaker has no user-friendly method to implement a rotating LiDAR at the moment. All sensors in CarMaker could be rotated and moved with explicit commands during the simulation. This can best be done in the underlying C code of the CarMaker ROS node implementation in the future. At the moment, a rotating LiDAR can also be effectively implemented by setting the sensor's field of view to 360°. We recommend this approach as the incoming data would be equivalent to a full cycle of a physical rotating LiDAR unit.
+
+### RADAR RSI
+
+The Aslan-CarMaker implementation can currently support at most one RADAR RSI unit. Only the first RADAR on the CarMaker vehicle is transmitted over ROS. Other units than the first one are ignored and should not be used at the moment as they would only slow down the simulation.
+
+### Camera RSI
+
+The Aslan-CarMaker implementation can currently support at most three Camera RSI sensors. Two of these sensors represent a left/right ZED stereo camera. The third sensor represents a single mono Basler Ace camera. Adding more than three cameras to the CarMaker test run will only slow down the simulation as the additional sensors will not be published on ROS.
+
+Every camera added by the user needs to be assigned to a specific ASLAN-specific camera type. This has to be done in the CarMaker ROS interface additional parameters in the Extras menu.
+
+<p align="center">
+<img src="doc/Images/ROS_parameters.png">
+</p>
+
+The ROS interface parameters are contained in an additional text file. A dedicated section inside describes how to assign a camera to a specific type by name. The names of the cameras assigned in the text file need to match exactly the names assigned to the cameras in the Assembly > Sensor Mountings section of the Vehicle Data Set parameters. A mismatch in names will lead to a camera not being published on ROS.
+
+<p align="center">
+<img src="doc/Images/Camera_assign.png">
+</p>
+
+The user is free to add any number of cameras up to three. It is even possible to add only half of the stereo camera and use it as a mono.
+
+### Global Navigation System
+
+A Global Navigation sensor in CarMaker can be used to simulate a physical GPS mounted on the ego vehicle. A few prerequisites need to be met to simulate a GPS system in CarMaker. They are described in detail in Section 20.14 of the CarMaker Reference Manual. In summary, the IPG Scenario that is currently running must have realistic set values for the latitude and longitude of the scenario origin. The actual date and time of the simulation need to be set in the Misc. section of the Environment parameters in CarMaker. For the chosen date of the simulation, the appropriate navigation message files must be downloaded from [NASA's archives](https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/broadcast_ephemeris_data.html).
+
+### Vehicle Control
+
+A simplified translator is implemented that converts Aslan vehicle control requests to CarMaker vehicle control signals. Currently these translators are linear and bypass any complex non-linear steering, gas pedal, and brake pedal parameters from the CarMaker vehicle model. Aslan sends a normalised torque request and/or steering request to CarMaker which gets linearly mapped to brake pedal position, gas pedal position, and steering wheel angle.
+
+### Documentation
+
+This is the main documentation that describes the higher level functionality and state of the Aslan-CarMaker implementation. The backbone of this project on the CarMaker side is a publicly available project which implements a basic ROS node inside CarMaker and synchronises it with a simple external ROS node. The example project is available in the [FAQ section](https://ipg-automotive.com/support/client-area/faq/ticket/how-can-i-use-carmaker-with-ros/) of the IPG Client Area. The documentation of the original example can still be found in the `doc/` folder of this project. A lot of the information inside the documentation is not applicable to this specific project but users can still find it to be a really useful aid and source of knowledge. Specifically note that any work on node synchronisation based on a specific incoming message has been removed from the current implementation.
