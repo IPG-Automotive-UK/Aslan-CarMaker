@@ -19,23 +19,40 @@ The project ASLAN code and documentation lives on the [ASLAN Github](https://git
 
 - Follow the ROS installation instructions from step 2 in the [ASLAN setup documentation](https://github.com/project-aslan/Aslan/tree/melodic#2-install-ros-melodic-desktop-full)
 - By default ROS installation is located in "/opt/ros/"
-- Create symbolic link "/opt/ros/ros1" that points to e.g. "/opt/ros/melodic"
-  - e.g. “cd /opt/ros; sudo ln -sfn melodic ros1”
-  - this is only to simplify usage of different ROS versions
-  - otherwise you have to change paths with every ROS update (e.g. in scripts)
+- Create symbolic link "/opt/ros/ros1" that points to your ROS distribution folder "/opt/ros/melodic"
+
+```bash
+cd /opt/ros
+sudo ln -sfn melodic ros1
+```
+
 - Check ROS installation
-  - roscore
-    - Open a new terminal
-    - type ```source /opt/ros/ros1/setup.bash```
-    - type ```roscore```
-  - Talker
-    - Open a second terminal
-    - type ```source /opt/ros/ros1/setup.bash```
-    - type ```rosrun roscpp_tutorials talker```
-  - Listener
-    - Open a third terminal
-    - type ```source /opt/ros/ros1/setup.bash```
-    - type ```rosrun roscpp_tutorials listener```
+  - roscore - execute this in a new terminal
+
+    ```bash
+    source /opt/ros/ros1/setup.bash
+    roscore
+    ```
+
+  - Talker - execute this in a new terminal #2
+
+    ```bash
+    source /opt/ros/ros1/setup.bash
+    rosrun roscpp_tutorials talker
+    ```
+
+  - Listener - execute this in a new terminal #3
+
+    ```bash
+    source /opt/ros/ros1/setup.bash
+    rosrun roscpp_tutorials listener
+    ```
+
+  - Confirm that you can see the "hello world" messages being transmitted and received as seen below:
+
+    <p align="center">
+    <img src="doc/Images/ROS_verification.png">
+    </p>
 
 ### CarMaker
 
@@ -44,6 +61,12 @@ The CarMaker installation files can be found in the [IPG Client Area](https://ip
 Select the appropriate version of CarMaker that you want to install. Then expand the "Office" panel and download the Linux release of CarMaker, e.g. this project was built for CarMaker 10.0.1, so the corresponding archive would be `CD-CarMakerOffice-linux-10.0.1.zip`.
 
 The archive constains the CarMaker installation files. Follow the installation instructions that can be found in the `InstallationGuide.pdf` inside the archive.
+
+#### CarMaker Setup
+
+The CarMaker installation attempts to automatically perform a number of steps required for standard CarMaker operation as well as for the functioning of this project. Unfortunately the installer has been known to fail silently on some of these steps. It is strongly suggested that the following checks are made if this is the first time any CarMaker version is being installed on a specific machine.
+
+  1. IPGHOME Environmental variable needs to point to the installation folder of CarMaker.
 
 ### Aslan-CarMaker Project
 

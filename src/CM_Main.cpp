@@ -791,7 +791,7 @@ App_TestRun_Calc (double dt)
 
     if (Traffic_Lighting_Calc(dt) < 0)
 	rv = -5;
-    
+
 #if defined(LABCAR)
     LCO_Write(DVA_VC);
 #endif
@@ -1080,7 +1080,7 @@ MainThread_Init (void)
      * - export system configuration  ...
      */
     if (SimCore_Init_Finalize() < 0)
-	rv = -1;
+    rv = -1;
 
     /* everything ok until now? */
     if (nError != Log_nError && rv >= 0)
@@ -1618,9 +1618,3 @@ main (int argc, char **argv)
 
     return SimCore_Handle_AppRestart ();
 }
-
-
-
-
-
-

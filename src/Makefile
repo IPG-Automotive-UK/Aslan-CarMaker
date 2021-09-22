@@ -31,7 +31,7 @@ LDFLAGS         += -L./../lib/
 LDFLAGS         += -Wl,-rpath,'$$ORIGIN/../lib/'
 INC_CFLAGS      += -I../include -I/opt/ros/ros1/include
 CFLAGS          += -rdynamic
-CXXFLAGS          += -rdynamic
+CXXFLAGS        += -rdynamic
 
 # Prepend local include/library directory to include path:
 # PREINC_CFLAGS +=		-I../include -I../lib/$(ARCH) -I../lib
