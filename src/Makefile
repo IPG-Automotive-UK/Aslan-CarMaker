@@ -1,5 +1,5 @@
 #******************************************************************************
-#**  CarMaker - Version 10.0
+#**  CarMaker - Version 10.1
 #**  Vehicle Dynamics Simulation Toolkit
 #**
 #**  Copyright (C)   IPG Automotive GmbH
@@ -13,7 +13,7 @@
 #**
 #******************************************************************************
 
-include /opt/ipg/carmaker/linux64-10.0.1/include/MakeDefs.linux64
+include /opt/ipg/carmaker/linux64-10.1/include/MakeDefs.linux64
 
 APP_VER =		"Car_Generic with CMRosIF"
 APP_NAME =		CarMaker.$(ARCH)$(EXE_EXT)

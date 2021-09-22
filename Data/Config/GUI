@@ -4,6 +4,7 @@ CM.Exe = bin/CarMaker.linux64
 CM.Args =
 CM.Exe.History:
 	bin/CarMaker.linux64
+	/opt/ipg/carmaker/linux64-10.1/bin/CarMaker.linux64
 	/opt/ipg/carmaker/linux64-10.0.1/bin/CarMaker.linux64
 	/opt/ipg/carmaker/linux64-10.0/bin/CarMaker.linux64
 	CarMaker.linux64

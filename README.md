@@ -8,7 +8,7 @@ The project ASLAN code and documentation lives on the [ASLAN Github](https://git
 
 ### Supported
 
-- CarMaker 10.0.1
+- CarMaker 10.1
 - Ubuntu 18.04 LTS
 - ROS 1 Melodic [ros-melodic-desktop-full](http://wiki.ros.org/melodic/Installation/Ubuntu)
 - Catkin Command Line Tools [catkin_tools](https://catkin-tools.readthedocs.io/en/latest/installing.html)
@@ -58,7 +58,7 @@ sudo ln -sfn melodic ros1
 
 The CarMaker installation files can be found in the [IPG Client Area](https://ipg-automotive.com/support/client-area/installation-files/). The Client Area requires that the user have a registered account on the system, which should be straightforward to create.
 
-Select the appropriate version of CarMaker that you want to install. Then expand the "Office" panel and download the Linux release of CarMaker, e.g. this project was built for CarMaker 10.0.1, so the corresponding archive would be `CD-CarMakerOffice-linux-10.0.1.zip`.
+Select the appropriate version of CarMaker that you want to install. Then expand the "Office" panel and download the Linux release of CarMaker, e.g. this project was built for CarMaker 10.1, so the corresponding archive would be `CD-CarMakerOffice-linux-10.1.zip`.
 
 The archive constains the CarMaker installation files. Follow the installation instructions that can be found in the `InstallationGuide.pdf` inside the archive.
 
@@ -66,13 +66,45 @@ The archive constains the CarMaker installation files. Follow the installation i
 
 The CarMaker installation attempts to automatically perform a number of steps required for standard CarMaker operation as well as for the functioning of this project. Unfortunately the installer has been known to fail silently on some of these steps. It is strongly suggested that the following checks are made if this is the first time any CarMaker version is being installed on a specific machine.
 
-  1. IPGHOME Environmental variable needs to point to the installation folder of CarMaker.
+1. IPGHOME Environmental variable needs to point to the installation folder of CarMaker. Use the following command in bash to check if the variable is set:
+
+    ```bash
+    echo $IPGHOME
+    ```
+
+    If the command above returns the root directory of your CarMaker installation,nothing else needs to be done. If nothing is returned, however, then thevariable IPGHOME needs to be set manually. Use a text editor to edit the /etcenvironment file, e.g.:
+
+    ```bash
+    sudo -H gedit "/etc/environment"
+    ```
+
+    Add a new line at the end of the file and save it:
+
+    ```bash
+    IPGHOME="/opt/ipg"
+    ```
+
+    Note that "/opt/ipg" is the standard CarMaker installation location. If youchose a custom location, you need to use that in the command above.
+
+2. LUSB library is required for CarMaker to run. This library should be installed the first time the ipg-installer runs on the local machine. Unfortunately this fails all to often. You can check whether you have the lusb library installed by running the following command in terminal:
+
+    ```bash
+    apt list libusb-dev
+    ```
+
+    If the command lists nothing, you can install the relevant package by typing:
+
+    ```bash
+    sudo apt-get install libusb-dev
+    ```
+
+    Alternatively, just use the second command and skip the checks. Nothing willhappen if you already have the library.
 
 ### Aslan-CarMaker Project
 
 #### Project Directory Setup
 
-The Aslan-CarMaker link is a complete CarMaker 10.0.1 project. IPG highly recommends that you have a separate dedicated directory for CarMaker projects with specific subdirectories for every major release of CarMaker. An example project structure in your Home directory would thus look like:
+The Aslan-CarMaker link is a complete CarMaker 10.1 project. IPG highly recommends that you have a separate dedicated directory for CarMaker projects with specific subdirectories for every major release of CarMaker. An example project structure in your Home directory would thus look like:
 
 ```bash
 Home
@@ -119,11 +151,11 @@ cd ../..
 
 #### Change CarMaker Version (optional)
 
-To compile and use a different CarMaker 10 version other than 10.0.1, several changes to the code need to be made. These changes are described here and must be made before the project is built. All paths below are relative to the project root folder.
+To compile and use a different CarMaker 10 version other than 10.1, several changes to the code need to be made. These changes are described here and must be made before the project is built. All paths below are relative to the project root folder.
 
-1. CMStart.sh - the command ```/opt/ipg/bin/CM-10.0.1``` (line 7) needs to point to the main CarMaker executable that you want to use. Alter the name and location of the executable as appropriate.
-2. src/Makefile - the command ```include /opt/ipg/carmaker/linux64-10.0.1/include/MakeDefs.linux64``` (line 16) needs to point to the correct MakeDefs file for the desired CarMaker version. Alter the CarMaker source directory path as appropriate.
-3. ros/ros1_ws/src/cmnode/CMakeLists.txt - The two strings that set the CarMaker version ```set(CARMAKER_VER 10.0.1)``` and ```set(CARMAKER_NUMVER 100001)``` (line 18-19) need to be appropriately altered to the CarMaker version of choice. The format for ```CARMAKER_NUMVER``` is ```<nDigitsMajor>.<2DigitsMinor>.<2DigitsBugfix>``` where the ```MAJOR.MINOR.BUGFIX``` is the actual CarMaker version.
+1. CMStart.sh - the command ```/opt/ipg/bin/CM-10.1``` (line 7) needs to point to the main CarMaker executable that you want to use. Alter the name and location of the executable as appropriate.
+2. src/Makefile - the command ```include /opt/ipg/carmaker/linux64-10.1/include/MakeDefs.linux64``` (line 16) needs to point to the correct MakeDefs file for the desired CarMaker version. Alter the CarMaker source directory path as appropriate.
+3. ros/ros1_ws/src/cmnode/CMakeLists.txt - The two strings that set the CarMaker version ```set(CARMAKER_VER 10.1)``` and ```set(CARMAKER_NUMVER 100100)``` (line 18-19) need to be appropriately altered to the CarMaker version of choice. The format for ```CARMAKER_NUMVER``` is ```<nDigitsMajor>.<2DigitsMinor>.<2DigitsBugfix>``` where the ```MAJOR.MINOR.BUGFIX``` is the actual CarMaker version.
 
 #### Build Project
 
