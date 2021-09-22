@@ -1,3 +1,32 @@
+- [Aslan-CarMaker](#aslan-carmaker)
+  - [Requirements](#requirements)
+    - [Supported](#supported)
+  - [Installation](#installation)
+    - [ROS](#ros)
+    - [CarMaker](#carmaker)
+      - [CarMaker Setup](#carmaker-setup)
+    - [Aslan-CarMaker Project](#aslan-carmaker-project)
+      - [Project Directory Setup](#project-directory-setup)
+      - [Clone Project Repository](#clone-project-repository)
+      - [Project Setup](#project-setup)
+      - [Change CarMaker Version (optional)](#change-carmaker-version-optional)
+      - [Build Project](#build-project)
+  - [Usage](#usage)
+    - [Start CarMaker](#start-carmaker)
+    - [Start Project](#start-project)
+    - [Start Aslan](#start-aslan)
+    - [Select Testrun](#select-testrun)
+    - [ASLAN Configuration](#aslan-configuration)
+  - [Status](#status)
+    - [LiDAR RSI](#lidar-rsi)
+    - [RADAR RSI](#radar-rsi)
+    - [Camera RSI](#camera-rsi)
+    - [Global Navigation System](#global-navigation-system)
+    - [Vehicle Control](#vehicle-control)
+    - [Documentation](#documentation)
+
+<small><i><a href='http://ecotrust-canada.github.io/markdown-toc/'>Table of contents generated with markdown-toc</a></i></small>
+
 # Aslan-CarMaker
 
 Integration of CarMaker with project [ASLAN](https://www.project-aslan.org/), open-source autonomous software for low-speed applications.
@@ -234,6 +263,24 @@ A testrun defines a complete CarMaker simulation. It consists of the scenario (i
 
 The example includes all sensors and functionality that is supported by the project at any given point. Some of the sensors may be disabled, but they are defined and mounted on the vehicle.
 
+### ASLAN Configuration
+
+To ensure that the CarMaker vehicle responds to vehicle controls sent from project ASLAN, a few settings need to be tweaked in the ASLAN GUI. These settings can be found in the Contorl tab of the GUI.
+
+<p align="center">
+<img src="doc/Images/Aslan_Controls.png">
+</p>
+
+The options that need to be selected are depicted above and are the following:
+
+- Speed Input: "CarMaker: Speed"
+- GPS/IMU: "CarMaker: GPS" or "None"
+- Mode: "Simulation"
+
+These settings enable CarMaker to respond to Vehicle Controls published by ASLAN and ASLAN to read the behaviour of the vehicle model from CarMaker. Thus a closed-loop simulation is formed where the virtual CarMaker model drives under the control of the ASLAN stack.
+
+Please select "None" as GPS/IMU input if you don't plan to add a Global Navigation sensor to the CarMaker vehicle model.
+
 ## Status
 
 ### LiDAR RSI
@@ -250,13 +297,13 @@ The Aslan-CarMaker implementation can currently support at most one RADAR RSI un
 
 The Aslan-CarMaker implementation can currently support at most three Camera RSI sensors. Two of these sensors represent a left/right ZED stereo camera. The third sensor represents a single mono Basler Ace camera. Adding more than three cameras to the CarMaker test run will only slow down the simulation as the additional sensors will not be published on ROS.
 
-Every camera added by the user needs to be assigned to a specific ASLAN-specific camera type. This has to be done in the CarMaker ROS interface additional parameters in the Extras menu.
+Every camera added by the user needs to be assigned to an ASLAN-specific camera type. This has to be done in the CarMaker ROS interface `Additional Parameters` in the `Extras` menu.
 
 <p align="center">
 <img src="doc/Images/ROS_parameters.png">
 </p>
 
-The ROS interface parameters are contained in an additional text file. A dedicated section inside describes how to assign a camera to a specific type by name. The names of the cameras assigned in the text file need to match exactly the names assigned to the cameras in the Assembly > Sensor Mountings section of the Vehicle Data Set parameters. A mismatch in names will lead to a camera not being published on ROS.
+The ROS interface parameters are contained in an additional text file. A dedicated section inside describes how to assign a camera to a specific type by name. The names of the cameras assigned in the text file need to match exactly the names assigned to the cameras in the `Assembly > Sensor Mountings` section of the `Vehicle Data Set` parameters. A mismatch in names will lead to a camera not being published on ROS.
 
 <p align="center">
 <img src="doc/Images/Camera_assign.png">
@@ -266,7 +313,7 @@ The user is free to add any number of cameras up to three. It is even possible t
 
 ### Global Navigation System
 
-A Global Navigation sensor in CarMaker can be used to simulate a physical GPS mounted on the ego vehicle. A few prerequisites need to be met to simulate a GPS system in CarMaker. They are described in detail in Section 20.14 of the CarMaker Reference Manual. In summary, the IPG Scenario that is currently running must have realistic set values for the latitude and longitude of the scenario origin. The actual date and time of the simulation need to be set in the Misc. section of the Environment parameters in CarMaker. For the chosen date of the simulation, the appropriate navigation message files must be downloaded from [NASA's archives](https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/broadcast_ephemeris_data.html).
+A Global Navigation sensor in CarMaker can be used to simulate a physical GPS mounted on the ego vehicle. A few prerequisites need to be met to simulate a GPS system in CarMaker. They are described in detail in Section 20.14 of the CarMaker Reference Manual. In summary, the IPG Scenario that is currently running must have realistic set values for the latitude and longitude of the scenario origin. The actual date and time of the simulation need to be set in the `Misc.` section of the `Environment Parameters` in CarMaker. For the chosen date of the simulation, the appropriate navigation message files must be downloaded from [NASA's archives](https://cddis.nasa.gov/Data_and_Derived_Products/GNSS/broadcast_ephemeris_data.html).
 
 ### Vehicle Control
 
