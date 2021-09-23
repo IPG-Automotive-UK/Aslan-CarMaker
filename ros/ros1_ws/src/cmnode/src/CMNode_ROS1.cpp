@@ -59,13 +59,13 @@
 #include "tf2_ros/transform_broadcaster.h"              /* Publish TF2 transforms */
 
 /* ASLAN */
-#include "sd_vehicle_interface/sd_vehicle_interface.h"  /* ASLAN SD Vehicle interface */
+#include "aslan_msgs/SDControl.h"  /* ASLAN SD Vehicle interface */
 
 /*! String and numerical version of this Node
 *  - String:    e.g. <Major>.<Minor>.<Patch>
 *  - Numerical: e.g. <nDigitsMajor><2DigitsMinor><2DigitsPatch>
 */
-#define CMNODE_VERSION "1.0"
+#define CMNODE_VERSION "1.0.0"
 #define CMNODE_NUMVER  010000
 
 
@@ -81,6 +81,9 @@
 * where ROS_INFO is used (implicit newline)*/
 # define LOG(frmt, ...)  Log(frmt "\n", ##__VA_ARGS__)
 
+/* Define conversion constants */
+#define  RAD_to_DEG  (57.2958)			//Conversion constant from rad to deg
+#define  DEG_to_RAD  (0.0174533)		//Conversion constant from deg to rad
 
 /* General switches for CarMaker ROS Node */
 typedef enum tCMNode_Mode {

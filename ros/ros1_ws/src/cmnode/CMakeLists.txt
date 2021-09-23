@@ -48,7 +48,6 @@ find_package(catkin REQUIRED COMPONENTS
    std_msgs
    cmrosutils
    aslan_msgs
-   sd_vehicle_interface
    sensor_msgs
    geometry_msgs
    tf2
